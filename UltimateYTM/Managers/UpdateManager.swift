@@ -354,8 +354,32 @@ final class UpdateManager: NSObject {
         let staged = stagedApp.path.replacingOccurrences(of: "\"", with: "\\\"")
         let stagingEsc = stagingParent.path.replacingOccurrences(of: "\"", with: "\\\"")
 
+        // Per-run log file so we can post-mortem failed swaps.
+        let logPath = "/tmp/uytmd-update-\(Int(Date().timeIntervalSince1970)).log"
+
+        // Helper script: self-daemonizes via nohup+disown so it survives parent
+        // app termination, logs every step to /tmp for forensics.
         let script = """
         #!/bin/bash
+        LOGFILE="\(logPath)"
+        exec >>"$LOGFILE" 2>&1
+        echo "[$(date '+%H:%M:%S')] === helper invoked, daemon=${UYTM_DAEMON:-0}, pid=$$, ppid=$PPID ==="
+
+        # Stage 1: re-exec ourselves detached from the parent app's process group.
+        # Without this, macOS may kill the helper when the GUI app terminates
+        # (process-group SIGHUP propagation), leaving the swap unfinished.
+        if [ "${UYTM_DAEMON:-}" != "1" ]; then
+            export UYTM_DAEMON=1
+            nohup "$0" "$@" </dev/null >>"$LOGFILE" 2>&1 &
+            BG_PID=$!
+            disown
+            echo "[$(date '+%H:%M:%S')] backgrounded as PID $BG_PID, exiting first stage"
+            exit 0
+        fi
+
+        # Stage 2: actual swap logic, running detached.
+        echo "[$(date '+%H:%M:%S')] DAEMON STAGE: pid=$$ ppid=$PPID"
+
         set -u
         PARENT_PID=\(pid)
         TARGET="\(target)"
@@ -364,29 +388,51 @@ final class UpdateManager: NSObject {
         SELF="$0"
 
         # Wait for parent to exit (max ~30s)
-        for _ in $(seq 1 150); do
-            if ! kill -0 "$PARENT_PID" 2>/dev/null; then break; fi
+        for i in $(seq 1 150); do
+            if ! kill -0 "$PARENT_PID" 2>/dev/null; then
+                echo "[$(date '+%H:%M:%S')] parent $PARENT_PID exited after iteration $i"
+                break
+            fi
             sleep 0.2
         done
         sleep 0.5
 
         # Replace target bundle
         if [ -d "$TARGET" ]; then
-            rm -rf "$TARGET" || exit 1
+            echo "[$(date '+%H:%M:%S')] removing existing $TARGET"
+            rm -rf "$TARGET"
+            RC=$?
+            echo "[$(date '+%H:%M:%S')] rm exit=$RC"
+            if [ "$RC" -ne 0 ]; then
+                echo "[$(date '+%H:%M:%S')] ABORT: cannot remove existing app"
+                exit 1
+            fi
         fi
-        mv "$STAGED" "$TARGET" || exit 1
+
+        echo "[$(date '+%H:%M:%S')] mv $STAGED -> $TARGET"
+        mv "$STAGED" "$TARGET"
+        RC=$?
+        echo "[$(date '+%H:%M:%S')] mv exit=$RC"
+        if [ "$RC" -ne 0 ]; then
+            echo "[$(date '+%H:%M:%S')] ABORT: mv failed"
+            exit 1
+        fi
 
         # Strip quarantine so Gatekeeper doesn't re-prompt unnecessarily
         xattr -dr com.apple.quarantine "$TARGET" 2>/dev/null || true
+        echo "[$(date '+%H:%M:%S')] xattr stripped"
 
         # Cleanup leftover staging dir
         rm -rf "$STAGING_DIR" 2>/dev/null || true
+        echo "[$(date '+%H:%M:%S')] staging cleaned"
 
         # Relaunch the new app
         open "$TARGET"
+        echo "[$(date '+%H:%M:%S')] open exit=$?"
 
         # Self-cleanup
         rm -- "$SELF" 2>/dev/null || true
+        echo "[$(date '+%H:%M:%S')] DONE"
         """
         try script.write(to: helperPath, atomically: true, encoding: .utf8)
         try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: helperPath.path)
@@ -394,15 +440,15 @@ final class UpdateManager: NSObject {
         let helper = Process()
         helper.executableURL = URL(fileURLWithPath: "/bin/bash")
         helper.arguments = [helperPath.path]
-        helper.standardOutput = nil
-        helper.standardError = nil
-        helper.standardInput = nil
+        // Keep all std streams open (nil = inherit from us) — the helper
+        // redirects them itself in stage 1.
         try helper.run()
 
-        // Give the helper a moment to start watching our PID before we die
-        try? await Task.sleep(nanoseconds: 250_000_000)
+        // Give helper enough time to fully self-daemonize (stage 1 → stage 2).
+        // Stage 1 is brief (single nohup + disown + exit). 1s is generous.
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
 
-        logger.info("Installer helper launched. Terminating to allow swap.")
+        logger.info("Installer helper launched (log: \(logPath)). Terminating to allow swap.")
         NSApp.terminate(nil)
     }
 }
