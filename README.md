@@ -62,8 +62,9 @@ A native macOS desktop application for YouTube Music built with Swift, featuring
 ### Using Xcode
 
 1. Open `UltimateYTM.xcodeproj` in Xcode
-2. Select your Mac as the destination
-3. Build and run (⌘R)
+2. Go to **Signing & Capabilities** → set **Team** to your own Apple Developer account (the project ships with no team baked in)
+3. Select your Mac as the destination
+4. Build and run (⌘R)
 
 ### Using Command Line
 
@@ -132,17 +133,6 @@ The app injects JavaScript into the YouTube Music web player to:
 - Depends on YouTube Music web interface (may break if YouTube changes their HTML structure)
 - Global keyboard shortcuts require Accessibility permissions
 - Album artwork download requires network access
-
-## Future Enhancements
-
-- [ ] Custom app icon
-- [ ] Lyrics support
-- [ ] Queue management
-- [ ] Last.fm scrobbling
-- [ ] Discord Rich Presence
-- [ ] Audio equalizer
-- [ ] Custom themes
-- [ ] Touch Bar support (for older Macs)
 
 ## Troubleshooting
 
