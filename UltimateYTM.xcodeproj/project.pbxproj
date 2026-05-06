@@ -1,0 +1,456 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 63;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		2A000001000000000000000A /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000002000000000000000A /* AppDelegate.swift */; };
+		2A000003000000000000000A /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000004000000000000000A /* MainWindowController.swift */; };
+		2A000005000000000000000A /* WebViewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000006000000000000000A /* WebViewManager.swift */; };
+		2A000007000000000000000A /* MediaPlayerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000008000000000000000A /* MediaPlayerManager.swift */; };
+		2A000009000000000000000A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2A000010000000000000000A /* Assets.xcassets */; };
+		2A000011000000000000000A /* LiquidGlassWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000012000000000000000A /* LiquidGlassWindow.swift */; };
+		2A000013000000000000000A /* MiniPlayerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000014000000000000000A /* MiniPlayerController.swift */; };
+		2A000015000000000000000A /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000016000000000000000A /* PreferencesWindowController.swift */; };
+		2A000017000000000000000A /* KeyboardShortcutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000018000000000000000A /* KeyboardShortcutManager.swift */; };
+		2A000019000000000000000A /* TrackInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000020000000000000000A /* TrackInfo.swift */; };
+		2A000021000000000000000A /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000022000000000000000A /* AppSettings.swift */; };
+		2A000023000000000000000A /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000024000000000000000A /* NotificationManager.swift */; };
+		2A000025000000000000000A /* JavaScriptBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000026000000000000000A /* JavaScriptBridge.swift */; };
+		2A000027000000000000000A /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000028000000000000000A /* main.swift */; };
+		2A000029000000000000000A /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000030000000000000000B /* AuthenticationManager.swift */; };
+		2A000033000000000000000A /* RainbowEqualizerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000034000000000000000A /* RainbowEqualizerView.swift */; };
+		2A000035000000000000000A /* AudioCaptureManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000036000000000000000A /* AudioCaptureManager.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		2A000002000000000000000A /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		2A000004000000000000000A /* MainWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowController.swift; sourceTree = "<group>"; };
+		2A000006000000000000000A /* WebViewManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewManager.swift; sourceTree = "<group>"; };
+		2A000008000000000000000A /* MediaPlayerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPlayerManager.swift; sourceTree = "<group>"; };
+		2A000010000000000000000A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2A000012000000000000000A /* LiquidGlassWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlassWindow.swift; sourceTree = "<group>"; };
+		2A000014000000000000000A /* MiniPlayerController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniPlayerController.swift; sourceTree = "<group>"; };
+		2A000016000000000000000A /* PreferencesWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesWindowController.swift; sourceTree = "<group>"; };
+		2A000018000000000000000A /* KeyboardShortcutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardShortcutManager.swift; sourceTree = "<group>"; };
+		2A000020000000000000000A /* TrackInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackInfo.swift; sourceTree = "<group>"; };
+		2A000022000000000000000A /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		2A000024000000000000000A /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		2A000026000000000000000A /* JavaScriptBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JavaScriptBridge.swift; sourceTree = "<group>"; };
+		2A000028000000000000000A /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		2A000030000000000000000A /* UltimateYTM.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UltimateYTM.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2A000030000000000000000B /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
+		2A000031000000000000000A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		2A000032000000000000000A /* UltimateYTM.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = UltimateYTM.entitlements; sourceTree = "<group>"; };
+		2A000034000000000000000A /* RainbowEqualizerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RainbowEqualizerView.swift; sourceTree = "<group>"; };
+		2A000036000000000000000A /* AudioCaptureManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCaptureManager.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		2A000040000000000000000A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		2A000050000000000000000A = {
+			isa = PBXGroup;
+			children = (
+				2A000051000000000000000A /* UltimateYTM */,
+				2A000052000000000000000A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		2A000051000000000000000A /* UltimateYTM */ = {
+			isa = PBXGroup;
+			children = (
+				2A000028000000000000000A /* main.swift */,
+				2A000002000000000000000A /* AppDelegate.swift */,
+				2A000053000000000000000A /* Views */,
+				2A000054000000000000000A /* Managers */,
+				2A000055000000000000000A /* Models */,
+				2A000056000000000000000A /* Utilities */,
+				2A000057000000000000000A /* Resources */,
+				2A000031000000000000000A /* Info.plist */,
+				2A000032000000000000000A /* UltimateYTM.entitlements */,
+			);
+			path = UltimateYTM;
+			sourceTree = "<group>";
+		};
+		2A000052000000000000000A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				2A000030000000000000000A /* UltimateYTM.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		2A000053000000000000000A /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				2A000004000000000000000A /* MainWindowController.swift */,
+				2A000012000000000000000A /* LiquidGlassWindow.swift */,
+				2A000014000000000000000A /* MiniPlayerController.swift */,
+				2A000016000000000000000A /* PreferencesWindowController.swift */,
+				2A000034000000000000000A /* RainbowEqualizerView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		2A000054000000000000000A /* Managers */ = {
+			isa = PBXGroup;
+			children = (
+				2A000006000000000000000A /* WebViewManager.swift */,
+				2A000008000000000000000A /* MediaPlayerManager.swift */,
+				2A000018000000000000000A /* KeyboardShortcutManager.swift */,
+				2A000024000000000000000A /* NotificationManager.swift */,
+				2A000030000000000000000B /* AuthenticationManager.swift */,
+				2A000036000000000000000A /* AudioCaptureManager.swift */,
+			);
+			path = Managers;
+			sourceTree = "<group>";
+		};
+		2A000055000000000000000A /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				2A000020000000000000000A /* TrackInfo.swift */,
+				2A000022000000000000000A /* AppSettings.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		2A000056000000000000000A /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				2A000026000000000000000A /* JavaScriptBridge.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		2A000057000000000000000A /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				2A000010000000000000000A /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		2A000060000000000000000A /* UltimateYTM */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2A000061000000000000000A /* Build configuration list for PBXNativeTarget "UltimateYTM" */;
+			buildPhases = (
+				2A000062000000000000000A /* Sources */,
+				2A000040000000000000000A /* Frameworks */,
+				2A000063000000000000000A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = UltimateYTM;
+			productName = UltimateYTM;
+			productReference = 2A000030000000000000000A /* UltimateYTM.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		2A000070000000000000000A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2620;
+				TargetAttributes = {
+					2A000060000000000000000A = {
+						CreatedOnToolsVersion = 26.0;
+					};
+				};
+			};
+			buildConfigurationList = 2A000071000000000000000A /* Build configuration list for PBXProject "UltimateYTM" */;
+			compatibilityVersion = "Xcode 15.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 2A000050000000000000000A;
+			productRefGroup = 2A000052000000000000000A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				2A000060000000000000000A /* UltimateYTM */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		2A000063000000000000000A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2A000009000000000000000A /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		2A000062000000000000000A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2A000001000000000000000A /* AppDelegate.swift in Sources */,
+				2A000003000000000000000A /* MainWindowController.swift in Sources */,
+				2A000005000000000000000A /* WebViewManager.swift in Sources */,
+				2A000007000000000000000A /* MediaPlayerManager.swift in Sources */,
+				2A000011000000000000000A /* LiquidGlassWindow.swift in Sources */,
+				2A000013000000000000000A /* MiniPlayerController.swift in Sources */,
+				2A000015000000000000000A /* PreferencesWindowController.swift in Sources */,
+				2A000017000000000000000A /* KeyboardShortcutManager.swift in Sources */,
+				2A000019000000000000000A /* TrackInfo.swift in Sources */,
+				2A000021000000000000000A /* AppSettings.swift in Sources */,
+				2A000023000000000000000A /* NotificationManager.swift in Sources */,
+				2A000025000000000000000A /* JavaScriptBridge.swift in Sources */,
+				2A000027000000000000000A /* main.swift in Sources */,
+				2A000029000000000000000A /* AuthenticationManager.swift in Sources */,
+				2A000033000000000000000A /* RainbowEqualizerView.swift in Sources */,
+				2A000035000000000000000A /* AudioCaptureManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		2A000080000000000000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 69LLXLJW63;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		2A000081000000000000000A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 69LLXLJW63;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		2A000082000000000000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = UltimateYTM/UltimateYTM.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = UltimateYTM/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Ultimate YTM";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMainNibFile = "";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ultimateytm.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		2A000083000000000000000A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = UltimateYTM/UltimateYTM.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = UltimateYTM/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Ultimate YTM";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.music";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMainNibFile = "";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ultimateytm.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2A000061000000000000000A /* Build configuration list for PBXNativeTarget "UltimateYTM" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2A000082000000000000000A /* Debug */,
+				2A000083000000000000000A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		2A000071000000000000000A /* Build configuration list for PBXProject "UltimateYTM" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2A000080000000000000000A /* Debug */,
+				2A000081000000000000000A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 2A000070000000000000000A /* Project object */;
+}
