@@ -71,3 +71,5 @@ ExportOptions.plist
 # Misc
 *.log
 *.tmp
+build/
+*.zip
