@@ -40,6 +40,9 @@ class AppSettings: ObservableObject {
         static let preferredAuthMethod = "preferredAuthMethod"
         static let lastAuthenticationStatus = "lastAuthenticationStatus"
         static let lastAuthenticationDate = "lastAuthenticationDate"
+        static let autoCheckUpdates = "autoCheckUpdates"
+        static let lastUpdateCheckDate = "lastUpdateCheckDate"
+        static let skippedUpdateVersion = "skippedUpdateVersion"
     }
     
     // Visual settings
@@ -92,7 +95,29 @@ class AppSettings: ObservableObject {
     @Published var lastAuthenticationDate: Date? {
         didSet { defaults.set(lastAuthenticationDate, forKey: Keys.lastAuthenticationDate) }
     }
-    
+
+    // Update settings
+    @Published var autoCheckUpdates: Bool {
+        didSet {
+            defaults.set(autoCheckUpdates, forKey: Keys.autoCheckUpdates)
+            NotificationCenter.default.post(name: .autoUpdateSettingChanged, object: nil)
+        }
+    }
+
+    @Published var lastUpdateCheckDate: Date? {
+        didSet { defaults.set(lastUpdateCheckDate, forKey: Keys.lastUpdateCheckDate) }
+    }
+
+    @Published var skippedUpdateVersion: String? {
+        didSet {
+            if let v = skippedUpdateVersion {
+                defaults.set(v, forKey: Keys.skippedUpdateVersion)
+            } else {
+                defaults.removeObject(forKey: Keys.skippedUpdateVersion)
+            }
+        }
+    }
+
     private init() {
         self.showEqualizer = defaults.bool(forKey: Keys.showEqualizer, default: true)
         self.equalizerWidthOverride = defaults.double(forKey: Keys.equalizerWidthOverride)
@@ -104,6 +129,9 @@ class AppSettings: ObservableObject {
         self.preferredAuthMethod = defaults.string(forKey: Keys.preferredAuthMethod) ?? "cookies-first"
         self.lastAuthenticationStatus = defaults.string(forKey: Keys.lastAuthenticationStatus) ?? "unknown"
         self.lastAuthenticationDate = defaults.object(forKey: Keys.lastAuthenticationDate) as? Date
+        self.autoCheckUpdates = defaults.bool(forKey: Keys.autoCheckUpdates, default: true)
+        self.lastUpdateCheckDate = defaults.object(forKey: Keys.lastUpdateCheckDate) as? Date
+        self.skippedUpdateVersion = defaults.string(forKey: Keys.skippedUpdateVersion)
     }
     
     // Window frame persistence
@@ -263,6 +291,7 @@ class AppSettings: ObservableObject {
 
 extension Notification.Name {
     static let equalizerSettingChanged = Notification.Name("equalizerSettingChanged")
+    static let autoUpdateSettingChanged = Notification.Name("autoUpdateSettingChanged")
 }
 
 // UserDefaults extension for cleaner default value handling

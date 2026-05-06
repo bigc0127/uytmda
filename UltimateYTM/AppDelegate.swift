@@ -42,6 +42,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         attemptAutoSignIn()
         registerNotificationObservers()
+        UpdateManager.shared.startAutoCheckIfEnabled()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -103,6 +104,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let prefsItem = NSMenuItem(title: "Settings…", action: #selector(showPreferences), keyEquivalent: ",")
         prefsItem.target = self
         menu.addItem(prefsItem)
+
+        let updatesItem = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdatesAction), keyEquivalent: "")
+        updatesItem.target = self
+        menu.addItem(updatesItem)
         menu.addItem(.separator())
 
         let servicesItem = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")
@@ -252,6 +257,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         center.addObserver(self, selector: #selector(showPreferences), name: .showPreferences, object: nil)
         center.addObserver(self, selector: #selector(reloadYouTubeMusic), name: .reloadYouTubeMusic, object: nil)
         center.addObserver(self, selector: #selector(retryAuthentication), name: .retryAuthentication, object: nil)
+        center.addObserver(self, selector: #selector(autoUpdateSettingChanged), name: .autoUpdateSettingChanged, object: nil)
+    }
+
+    @objc private func autoUpdateSettingChanged() {
+        UpdateManager.shared.startAutoCheckIfEnabled()
+    }
+
+    @objc private func checkForUpdatesAction() {
+        Task { @MainActor in
+            await UpdateManager.shared.checkForUpdates(userInitiated: true)
+        }
     }
 
     // MARK: - Actions

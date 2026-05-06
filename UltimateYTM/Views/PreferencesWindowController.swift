@@ -34,7 +34,7 @@ private struct PreferencesView: View {
     @State private var selection: Tab = .general
 
     enum Tab: Hashable {
-        case general, playback, account
+        case general, playback, account, updates
     }
 
     var body: some View {
@@ -50,6 +50,10 @@ private struct PreferencesView: View {
             AccountPane()
                 .tabItem { Label("Account", systemImage: "person.circle") }
                 .tag(Tab.account)
+
+            UpdatesPane()
+                .tabItem { Label("Updates", systemImage: "arrow.down.circle") }
+                .tag(Tab.updates)
         }
         .frame(width: 480, height: 500)
         .padding(.top, 12)
@@ -223,6 +227,73 @@ private struct AccountPane: View {
             isSigningOut = false
             refresh()
         }
+    }
+}
+
+private struct UpdatesPane: View {
+    @State private var autoCheck = AppSettings.shared.autoCheckUpdates
+    @State private var lastCheck: Date? = AppSettings.shared.lastUpdateCheckDate
+    @State private var skippedVersion: String? = AppSettings.shared.skippedUpdateVersion
+    @State private var isChecking = false
+
+    private var currentVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+    }
+
+    var body: some View {
+        Form {
+            Section("Current Version") {
+                LabeledContent("Version", value: "v\(currentVersion)")
+                if let lastCheck {
+                    LabeledContent("Last Check", value: lastCheck.formatted(date: .abbreviated, time: .shortened))
+                }
+            }
+
+            Section("Automatic Updates") {
+                Toggle("Check for updates automatically", isOn: $autoCheck)
+                    .onChange(of: autoCheck) { _, newValue in
+                        AppSettings.shared.autoCheckUpdates = newValue
+                    }
+                Text("Checks GitHub Releases once per day. You will always be prompted before any update is downloaded or installed.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Button {
+                    Task { @MainActor in
+                        isChecking = true
+                        await UpdateManager.shared.checkForUpdates(userInitiated: true)
+                        isChecking = false
+                        lastCheck = AppSettings.shared.lastUpdateCheckDate
+                        skippedVersion = AppSettings.shared.skippedUpdateVersion
+                    }
+                } label: {
+                    HStack {
+                        if isChecking { ProgressView().controlSize(.small) }
+                        Text(isChecking ? "Checking…" : "Check Now")
+                    }
+                }
+                .disabled(isChecking)
+            }
+
+            if let skippedVersion {
+                Section("Skipped Version") {
+                    LabeledContent("Skipped", value: "v\(skippedVersion)")
+                    Button("Clear Skip") {
+                        AppSettings.shared.skippedUpdateVersion = nil
+                        self.skippedVersion = nil
+                    }
+                }
+            }
+
+            Section {
+                Link("View all releases on GitHub",
+                     destination: URL(string: "https://github.com/bigc0127/uytmda/releases")!)
+            }
+        }
+        .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
     }
 }
 
