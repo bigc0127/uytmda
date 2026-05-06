@@ -73,3 +73,4 @@ ExportOptions.plist
 *.tmp
 build/
 *.zip
+.claude/
