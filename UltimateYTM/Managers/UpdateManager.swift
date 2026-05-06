@@ -254,7 +254,7 @@ final class UpdateManager: NSObject {
                 label.stringValue = "Verifying…"
                 let actual = try await sha256Hex(of: zipURL)
                 if actual != expected {
-                    logger.error("SHA256 mismatch (expected=\(expected), actual=\(actual))")
+                    logger.error("SHA256 mismatch (expected=\(expected, privacy: .public), actual=\(actual, privacy: .public))")
                     throw UpdateError.integrityCheckFailed
                 }
                 logger.info("SHA256 verified")
@@ -264,7 +264,13 @@ final class UpdateManager: NSObject {
             try await install(zipURL: zipURL, version: release.versionString)
             // install() does not return — it spawns the helper and terminates this app.
         } catch {
-            logger.error("Install failed: \(error.localizedDescription)")
+            // Make error visible: public log + plain-text dump in /tmp for debugging.
+            let msg = error.localizedDescription
+            logger.error("Install failed: \(msg, privacy: .public)")
+            NSLog("[UltimateYTM Updater] Install failed: %@", msg)
+            let dumpPath = "/tmp/uytmd-update-error-\(Int(Date().timeIntervalSince1970)).log"
+            let detail = "\(Date()) Install failed\nerror: \(msg)\nfull: \(error)\n"
+            try? detail.write(toFile: dumpPath, atomically: true, encoding: .utf8)
             presentErrorAlert(error)
         }
     }
@@ -303,19 +309,41 @@ final class UpdateManager: NSObject {
         let fm = FileManager.default
         let bundleURL = Bundle.main.bundleURL
 
+        // Persistent breadcrumb so we can post-mortem failures even before
+        // the helper script writes its own log.
+        let trace = "/tmp/uytmd-install-trace-\(Int(Date().timeIntervalSince1970)).log"
+        func step(_ msg: String) {
+            NSLog("[UltimateYTM Updater] %@", msg)
+            let line = "[\(Date())] \(msg)\n"
+            if let data = line.data(using: .utf8) {
+                if let h = try? FileHandle(forWritingTo: URL(fileURLWithPath: trace)) {
+                    try? h.seekToEnd()
+                    try? h.write(contentsOf: data)
+                    try? h.close()
+                } else {
+                    try? data.write(to: URL(fileURLWithPath: trace))
+                }
+            }
+        }
+        step("install() entered. zip=\(zipURL.path) bundle=\(bundleURL.path)")
+
         if isDevelopmentBuild {
+            step("ABORT: development build")
             throw UpdateError.targetNotFound
         }
 
         let resourceValues = try? bundleURL.resourceValues(forKeys: [.volumeIsReadOnlyKey])
         if resourceValues?.volumeIsReadOnly == true {
+            step("ABORT: read-only volume")
             throw UpdateError.readOnlyVolume
         }
 
         // Stage in a uniquely named temp dir
         let stagingParent = fm.temporaryDirectory
             .appendingPathComponent("UltimateYTM-update-\(UUID().uuidString)", isDirectory: true)
+        step("creating staging \(stagingParent.path)")
         try fm.createDirectory(at: stagingParent, withIntermediateDirectories: true)
+        step("staging created OK")
 
         // Extract via ditto on a background thread
         let zipPath = zipURL.path
@@ -336,15 +364,19 @@ final class UpdateManager: NSObject {
             return (proc.terminationStatus, stderr)
         }.value
 
+        step("ditto exit=\(extractResult.0) stderr=\(extractResult.1)")
         guard extractResult.0 == 0 else {
             throw UpdateError.extractionFailed(extractResult.1.isEmpty ? "ditto exit \(extractResult.0)" : extractResult.1)
         }
 
         // Locate the .app produced by extraction
         let contents = try fm.contentsOfDirectory(at: stagingParent, includingPropertiesForKeys: nil)
+        step("staging contents: \(contents.map { $0.lastPathComponent })")
         guard let stagedApp = contents.first(where: { $0.pathExtension == "app" }) else {
+            step("ABORT: no .app in archive")
             throw UpdateError.extractionFailed("No .app bundle found in archive")
         }
+        step("found staged app: \(stagedApp.path)")
 
         // Build helper bash script. Quote-escape paths in case anyone has spaces in /Applications
         // (rare but real). We deliberately use plain bash so we don't inherit any sandbox quirks.
@@ -435,7 +467,9 @@ final class UpdateManager: NSObject {
         echo "[$(date '+%H:%M:%S')] DONE"
         """
         try script.write(to: helperPath, atomically: true, encoding: .utf8)
+        step("wrote helper \(helperPath.path)")
         try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: helperPath.path)
+        step("chmodded helper")
 
         let helper = Process()
         helper.executableURL = URL(fileURLWithPath: "/bin/bash")
@@ -443,12 +477,14 @@ final class UpdateManager: NSObject {
         // Keep all std streams open (nil = inherit from us) — the helper
         // redirects them itself in stage 1.
         try helper.run()
+        step("helper.run() returned, child pid=\(helper.processIdentifier)")
 
         // Give helper enough time to fully self-daemonize (stage 1 → stage 2).
         // Stage 1 is brief (single nohup + disown + exit). 1s is generous.
         try? await Task.sleep(nanoseconds: 1_000_000_000)
 
-        logger.info("Installer helper launched (log: \(logPath)). Terminating to allow swap.")
+        step("about to NSApp.terminate")
+        logger.info("Installer helper launched (log: \(logPath, privacy: .public)). Terminating.")
         NSApp.terminate(nil)
     }
 }
