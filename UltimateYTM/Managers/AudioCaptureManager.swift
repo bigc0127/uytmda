@@ -39,6 +39,11 @@ class AudioCaptureManager: NSObject {
     /// Pre-computed log-spaced FFT bin ranges per band.
     /// Filled lazily once we know the sample rate.
     nonisolated(unsafe) private var bandRanges: [(start: Int, end: Int)] = []
+    /// Per-band dB gain to compensate for the natural pink-noise tilt of music
+    /// (+3 dB per octave above the lowest band). Without this, low-frequency
+    /// bands dominate and high-frequency bands (the violet end of the rainbow)
+    /// barely register even on bright content like cymbals or sibilance.
+    nonisolated(unsafe) private var bandTiltDb: [Double] = []
     nonisolated(unsafe) private var lastSampleRate: Double = 0
 
     override init() {
@@ -105,6 +110,7 @@ class AudioCaptureManager: NSObject {
         if sampleRate != lastSampleRate {
             lastSampleRate = sampleRate
             bandRanges = makeLogSpacedBands(sampleRate: sampleRate)
+            bandTiltDb = makeBandTilt(sampleRate: sampleRate)
         }
 
         var blockBuffer: CMBlockBuffer?
@@ -185,13 +191,17 @@ class AudioCaptureManager: NSObject {
     }
 
     nonisolated private func processMagnitudes(_ magnitudes: [Float]) {
-        guard !bandRanges.isEmpty else { return }
+        guard !bandRanges.isEmpty, bandTiltDb.count == bandCount else { return }
 
         // Average magnitudes within each band's bin range, then convert to dB-ish.
-        let attack: Double = 0.55
-        let release: Double = 0.18
-        let noiseFloor: Double = -60.0  // dB
-        let topDb: Double = -10.0
+        // Tuning notes:
+        //   noiseFloor lowered -60 → -78 dB so soft passages still register.
+        //   topDb raised -10 → -6 dB to keep loud content from clipping the bar.
+        //   release shortened so peaks settle a bit faster (looks livelier).
+        let attack: Double = 0.65
+        let release: Double = 0.14
+        let noiseFloor: Double = -78.0  // dB
+        let topDb: Double = -6.0
 
         var bands = [Double](repeating: 0, count: bandCount)
         for i in 0..<bandCount {
@@ -202,7 +212,9 @@ class AudioCaptureManager: NSObject {
                 sum += magnitudes[k]
             }
             let avg = Double(sum / Float(count) / Float(fftSize))
-            let db = 20 * log10(max(avg, 1e-7))
+            // Raw band dB, plus a +3 dB/octave pinking tilt so the high-frequency
+            // (violet) bands aren't perpetually dwarfed by the low-frequency ones.
+            let db = 20 * log10(max(avg, 1e-7)) + bandTiltDb[i]
             let normalized = max(0, min(1, (db - noiseFloor) / (topDb - noiseFloor)))
             bands[i] = normalized
         }
@@ -216,6 +228,30 @@ class AudioCaptureManager: NSObject {
         Task { @MainActor in
             self.onAudioLevelsUpdated?(snapshot)
         }
+    }
+
+    /// +3 dB/octave compensation across the band range (pink-noise tilt).
+    /// Real-world music has far more energy in low frequencies than high ones,
+    /// so without this the right-side (violet) bars look dead even on bright
+    /// content. The lowest band gets 0 dB; each octave above adds +3 dB.
+    nonisolated private func makeBandTilt(sampleRate: Double) -> [Double] {
+        let halfSize = fftSize / 2
+        let nyquist = sampleRate / 2
+        let binHz = nyquist / Double(halfSize)
+        let lowHz = 30.0
+        let highHz = min(16_000.0, nyquist - binHz)
+        let logLow = log(lowHz)
+        let logHigh = log(highHz)
+
+        var tilt = [Double](repeating: 0, count: bandCount)
+        for i in 0..<bandCount {
+            // Use the band's center (geometric midpoint) for the tilt curve.
+            let t = (Double(i) + 0.5) / Double(bandCount)
+            let centerHz = exp(logLow + t * (logHigh - logLow))
+            let octavesAboveLow = log2(centerHz / lowHz)
+            tilt[i] = 3.0 * octavesAboveLow
+        }
+        return tilt
     }
 
     /// Build log-spaced FFT bin ranges from ~30 Hz to ~16 kHz.
