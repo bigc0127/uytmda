@@ -27,6 +27,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         installMainMenu()
+        // MUST run before any WKWebView is created so WebKit finds the cookie
+        // jar in place when it initializes the data store.
+        CookieBackupManager.shared.restoreIfNeeded()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -43,6 +46,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         attemptAutoSignIn()
         registerNotificationObservers()
         UpdateManager.shared.startAutoCheckIfEnabled()
+        CookieBackupManager.shared.snapshot()
+        CookieBackupManager.shared.startPeriodicSnapshots()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        CookieBackupManager.shared.snapshot()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
