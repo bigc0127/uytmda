@@ -30,14 +30,30 @@ class JavaScriptBridge {
             const repeatButton = document.querySelector('#repeat-button');
             
             let artworkURL = null;
-            if (artworkElement) {
-                const bgImage = artworkElement.style.backgroundImage;
-                if (bgImage) {
-                    const match = bgImage.match(/url\\("(.+)"\\)/);
-                    if (match && match[1]) {
-                        artworkURL = match[1].split('=')[0] + '=w512-h512-l90-rj';
-                    }
+            // 1. MediaSession metadata is the most reliable source on YT Music.
+            try {
+                const md = navigator.mediaSession && navigator.mediaSession.metadata;
+                if (md && md.artwork && md.artwork.length) {
+                    artworkURL = md.artwork[md.artwork.length - 1].src;
                 }
+            } catch (e) {}
+            // 2. Fall back to the player-bar thumbnail: <img> src, or CSS background.
+            if (!artworkURL && artworkElement) {
+                if (artworkElement.tagName === 'IMG' && artworkElement.src) {
+                    artworkURL = artworkElement.src;
+                } else if (artworkElement.style && artworkElement.style.backgroundImage) {
+                    const match = artworkElement.style.backgroundImage.match(/url\\("?(.+?)"?\\)/);
+                    if (match && match[1]) { artworkURL = match[1]; }
+                }
+            }
+            // 3. Last resort: any image inside the player bar.
+            if (!artworkURL) {
+                const img = document.querySelector('ytmusic-player-bar img, .image.ytmusic-player-bar img, img.image.ytmusic-player-bar');
+                if (img && img.src) { artworkURL = img.src; }
+            }
+            // Upscale googleusercontent thumbnails to a crisp square.
+            if (artworkURL && artworkURL.indexOf('googleusercontent') !== -1) {
+                artworkURL = artworkURL.split('=')[0] + '=w544-h544-l90-rj';
             }
             
             let repeatMode = 'NONE';
