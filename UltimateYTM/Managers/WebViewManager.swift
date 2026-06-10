@@ -27,7 +27,7 @@ class WebViewManager: NSObject {
     weak var delegate: WebViewManagerDelegate?
     
     private(set) var webView: WKWebView!
-    private var trackInfoTimer: Timer?
+    private nonisolated(unsafe) var trackInfoTimer: Timer?
     private(set) var currentTrackInfo: TrackInfo = .empty
     
     private let youTubeMusicURL = URL(string: "https://music.youtube.com")!
@@ -35,6 +35,11 @@ class WebViewManager: NSObject {
     override init() {
         super.init()
         setupWebView()
+    }
+
+    deinit {
+        // Timer.invalidate() is safe to call from any thread.
+        trackInfoTimer?.invalidate()
     }
     
     private func setupWebView() {

@@ -62,6 +62,15 @@ class MainWindowController: NSWindowController {
 
         webViewManager = WebViewManager()
         webViewManager.delegate = self
+        NotchBridge.shared.webViewManager = webViewManager
+
+        // Wire MediaPlayerManager remote-command callbacks to WebViewManager.
+        let mpm = MediaPlayerManager.shared
+        mpm.onPlayPause = { [weak self] in await self?.webViewManager.playPause() }
+        mpm.onNext      = { [weak self] in await self?.webViewManager.nextTrack() }
+        mpm.onPrevious  = { [weak self] in await self?.webViewManager.previousTrack() }
+        mpm.onSeek      = { [weak self] t in await self?.webViewManager.seekTo(time: t) }
+
         guard let webView = webViewManager.webView else { return }
 
         webView.translatesAutoresizingMaskIntoConstraints = false
@@ -324,6 +333,17 @@ extension MainWindowController: WebViewManagerDelegate {
         if trackInfo.title != previous.title {
             NotificationManager.shared.showTrackChangeNotification(trackInfo: trackInfo)
         }
+
+        // Keep the ~1s polling timer running only while playing (contract requirement).
+        if trackInfo.isPaused {
+            manager.stopTrackInfoPolling()
+        } else if previous.isPaused && !trackInfo.isPaused {
+            manager.startTrackInfoPolling()
+        }
+
+        // Update system Now Playing and broadcast to companion apps.
+        MediaPlayerManager.shared.updateNowPlayingInfo(with: trackInfo)
+        NotchBridge.shared.broadcast(trackInfo: trackInfo)
 
         window?.title = trackInfo.isValid ? "\(trackInfo.title) — \(trackInfo.artist)" : "Ultimate YTM"
         NotificationCenter.default.post(name: .trackInfoUpdated, object: trackInfo)
