@@ -115,26 +115,36 @@ class MediaPlayerManager: NSObject {
                 ? artworkImage.size 
                 : NSSize(width: 512, height: 512)
             
-            let artwork = MPMediaItemArtwork(boundsSize: artworkSize) { requestedSize in
-                // Return the original image or resize if needed
-                if requestedSize == artworkImage.size {
-                    return artworkImage
-                }
-                
-                // Resize image to requested size
-                let resizedImage = NSImage(size: requestedSize)
-                resizedImage.lockFocus()
-                artworkImage.draw(in: NSRect(origin: .zero, size: requestedSize),
-                                from: NSRect(origin: .zero, size: artworkImage.size),
-                                operation: .copy,
-                                fraction: 1.0)
-                resizedImage.unlockFocus()
-                return resizedImage
-            }
-            info[MPMediaItemPropertyArtwork] = artwork
+            info[MPMediaItemPropertyArtwork] = Self.makeArtwork(image: artworkImage, boundsSize: artworkSize)
         }
-        
+
         nowPlayingInfo.nowPlayingInfo = info
+    }
+
+    /// Builds an `MPMediaItemArtwork` whose request handler is **not** main-actor isolated.
+    /// MediaPlayer invokes the handler on its own background dispatch queue; if the closure
+    /// inherits this class's `@MainActor` isolation, Swift's concurrency runtime fires an
+    /// executor-isolation assertion (`EXC_BREAKPOINT` / `dispatch_assert_queue_fail`) when it
+    /// runs off the main thread, crashing the app on every now-playing update that has artwork.
+    /// Declaring the helper `nonisolated` strips the isolation so the handler is safe to run
+    /// from MediaPlayer's queue.
+    nonisolated private static func makeArtwork(image artworkImage: NSImage, boundsSize: NSSize) -> MPMediaItemArtwork {
+        MPMediaItemArtwork(boundsSize: boundsSize) { requestedSize in
+            // Return the original image or resize if needed
+            if requestedSize == artworkImage.size {
+                return artworkImage
+            }
+
+            // Resize image to requested size
+            let resizedImage = NSImage(size: requestedSize)
+            resizedImage.lockFocus()
+            artworkImage.draw(in: NSRect(origin: .zero, size: requestedSize),
+                            from: NSRect(origin: .zero, size: artworkImage.size),
+                            operation: .copy,
+                            fraction: 1.0)
+            resizedImage.unlockFocus()
+            return resizedImage
+        }
     }
     
     func clearNowPlayingInfo() {
