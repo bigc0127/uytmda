@@ -64,6 +64,8 @@ final class NotchBridge {
             "isPlaying":   trackInfo.isPaused ? "0" : "1",
             "artworkPath": cachedArtworkPath,
             "trackID":     extractTrackID(from: trackInfo.artworkURL),
+            "rating":      trackInfo.rating,
+            "inLibrary":   trackInfo.inLibrary ? "1" : "0",
         ]
 
         dnc.postNotificationName(
@@ -180,6 +182,15 @@ final class NotchBridge {
                 if let seconds = Double(value) {
                     await wvm.seekTo(time: seconds)
                 }
+            case "thumbsUp":
+                await wvm.thumbsUp()
+                self?.broadcast(trackInfo: wvm.currentTrackInfo)
+            case "thumbsDown":
+                await wvm.thumbsDown()
+                self?.broadcast(trackInfo: wvm.currentTrackInfo)
+            case "toggleLibrary":
+                await wvm.toggleLibrary()
+                self?.broadcast(trackInfo: wvm.currentTrackInfo)
             default:
                 print("[NotchBridge] Unknown remote command: \(command)")
             }

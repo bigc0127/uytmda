@@ -239,6 +239,26 @@ class WebViewManager: NSObject {
         await updateTrackInfo()
     }
     
+    func thumbsUp() async {
+        _ = try? await webView.evaluateJavaScript(JavaScriptBridge.thumbsUpScript())
+        // Let the DOM settle so the new like-status is read back.
+        _ = try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+        await updateTrackInfo()
+    }
+
+    func thumbsDown() async {
+        _ = try? await webView.evaluateJavaScript(JavaScriptBridge.thumbsDownScript())
+        _ = try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+        await updateTrackInfo()
+    }
+
+    func toggleLibrary() async {
+        _ = try? await webView.evaluateJavaScript(JavaScriptBridge.toggleLibraryScript())
+        // Library toggle may route through the overflow menu (~250ms delay there).
+        _ = try? await Task.sleep(nanoseconds: 600_000_000) // 0.6 seconds
+        await updateTrackInfo()
+    }
+
     func seekTo(time: TimeInterval) async {
         _ = try? await webView.evaluateJavaScript(JavaScriptBridge.seekToScript(time: time))
         await updateTrackInfo()

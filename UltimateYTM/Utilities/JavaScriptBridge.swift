@@ -65,7 +65,36 @@ class JavaScriptBridge {
                     repeatMode = 'ALL';
                 }
             }
-            
+
+            // Rating: like-button-renderer exposes like-status LIKE/DISLIKE/INDIFFERENT.
+            let rating = '';
+            try {
+                const likeRenderer = document.querySelector('ytmusic-player-bar ytmusic-like-button-renderer');
+                if (likeRenderer) {
+                    const status = likeRenderer.getAttribute('like-status');
+                    if (status === 'LIKE') { rating = 'up'; }
+                    else if (status === 'DISLIKE') { rating = 'down'; }
+                }
+            } catch (e) {}
+
+            // Library: inspect any player-bar toggle whose label mentions library.
+            // Read aria-pressed when present; default false if undetectable.
+            let inLibrary = false;
+            try {
+                const candidates = document.querySelectorAll('ytmusic-player-bar button[aria-label], ytmusic-player-bar yt-button-shape button[aria-label]');
+                for (const btn of candidates) {
+                    const label = (btn.getAttribute('aria-label') || '').toLowerCase();
+                    if (/library/i.test(label) || /\\bsaved\\b/i.test(label)) {
+                        const pressed = btn.getAttribute('aria-pressed');
+                        // "Remove from library" / "Saved" => currently in library.
+                        if (pressed === 'true' || /remove|saved/i.test(label)) {
+                            inLibrary = true;
+                        }
+                        break;
+                    }
+                }
+            } catch (e) {}
+
             return {
                 title: titleElement ? titleElement.textContent.trim() : '',
                 artist: artistElement ? artistElement.textContent.trim() : '',
@@ -75,7 +104,9 @@ class JavaScriptBridge {
                 artworkURL: artworkURL,
                 isPaused: video ? video.paused : true,
                 isShuffled: shuffleButton ? shuffleButton.getAttribute('aria-pressed') === 'true' : false,
-                repeatMode: repeatMode
+                repeatMode: repeatMode,
+                rating: rating,
+                inLibrary: inLibrary
             };
         }
         
@@ -166,6 +197,79 @@ class JavaScriptBridge {
         """
     }
     
+    static func thumbsUpScript() -> String {
+        """
+        (function() {
+            const bar = document.querySelector('ytmusic-player-bar');
+            if (!bar) { return false; }
+            let btn = bar.querySelector('#button-shape-like button');
+            if (!btn) {
+                const renderer = bar.querySelector('ytmusic-like-button-renderer');
+                if (renderer) {
+                    btn = renderer.querySelector('yt-button-shape:first-of-type button, button[aria-label*="like" i]:not([aria-label*="dislike" i])');
+                }
+            }
+            if (btn) { btn.click(); return true; }
+            return false;
+        })();
+        """
+    }
+
+    static func thumbsDownScript() -> String {
+        """
+        (function() {
+            const bar = document.querySelector('ytmusic-player-bar');
+            if (!bar) { return false; }
+            let btn = bar.querySelector('#button-shape-dislike button');
+            if (!btn) {
+                const renderer = bar.querySelector('ytmusic-like-button-renderer');
+                if (renderer) {
+                    btn = renderer.querySelector('button[aria-label*="dislike" i]');
+                }
+            }
+            if (btn) { btn.click(); return true; }
+            return false;
+        })();
+        """
+    }
+
+    static func toggleLibraryScript() -> String {
+        """
+        (function() {
+            const bar = document.querySelector('ytmusic-player-bar');
+            if (!bar) { return false; }
+
+            // 1. Direct library toggle in the player bar, if present.
+            const directBtns = bar.querySelectorAll('button[aria-label], yt-button-shape button[aria-label]');
+            for (const b of directBtns) {
+                const label = (b.getAttribute('aria-label') || '');
+                if (/library/i.test(label)) { b.click(); return true; }
+            }
+
+            // 2. Otherwise open the overflow ("...") menu and click the library item.
+            const menuBtn = bar.querySelector('ytmusic-menu-renderer button, .menu button, button[aria-label*="more" i], yt-button-shape button[aria-label*="more" i]');
+            if (!menuBtn) { return false; }
+            menuBtn.click();
+
+            // Menu renders into a popup container; query after a short delay.
+            setTimeout(function() {
+                const items = document.querySelectorAll('ytmusic-menu-popup-renderer tp-yt-paper-listbox ytmusic-menu-navigation-item-renderer, ytmusic-menu-popup-renderer ytmusic-menu-service-item-renderer, tp-yt-paper-item');
+                for (const item of items) {
+                    const text = (item.textContent || '') + ' ' + (item.getAttribute('aria-label') || '');
+                    if (/library/i.test(text)) {
+                        const clickable = item.querySelector('button') || item;
+                        clickable.click();
+                        return;
+                    }
+                }
+                // Nothing matched: close the menu to avoid leaving it open.
+                document.body.click();
+            }, 250);
+            return true;
+        })();
+        """
+    }
+
     static func seekToScript(time: TimeInterval) -> String {
         """
         (function() {

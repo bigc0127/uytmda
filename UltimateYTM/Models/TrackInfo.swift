@@ -26,11 +26,13 @@ struct TrackInfo: Equatable, Codable {
     let isPaused: Bool
     let isShuffled: Bool
     let repeatMode: String
-    
+    let rating: String      // "" | "up" | "down"
+    let inLibrary: Bool
+
     var artworkImage: NSImage?
-    
+
     enum CodingKeys: String, CodingKey {
-        case title, artist, album, duration, currentTime, artworkURL, isPaused, isShuffled, repeatMode
+        case title, artist, album, duration, currentTime, artworkURL, isPaused, isShuffled, repeatMode, rating, inLibrary
     }
     
     static var empty: TrackInfo {
@@ -44,6 +46,8 @@ struct TrackInfo: Equatable, Codable {
             isPaused: true,
             isShuffled: false,
             repeatMode: "NONE",
+            rating: "",
+            inLibrary: false,
             artworkImage: nil
         )
     }
