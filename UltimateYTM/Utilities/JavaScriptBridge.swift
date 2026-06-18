@@ -77,19 +77,34 @@ class JavaScriptBridge {
                 }
             } catch (e) {}
 
-            // Library: inspect any player-bar toggle whose label mentions library.
-            // Read aria-pressed when present; default false if undetectable.
+            // Library: find the player-bar save/library toggle (same control
+            // toggleLibraryScript() clicks) and read its on/off state. Signals are
+            // checked most-authoritative first — aria-pressed, then the swapped
+            // icon (library_add_check / saved), then the label phrasing — because a
+            // static label can lag the real state. Guarded; defaults false.
             let inLibrary = false;
             try {
-                const candidates = document.querySelectorAll('ytmusic-player-bar button[aria-label], ytmusic-player-bar yt-button-shape button[aria-label]');
-                for (const btn of candidates) {
-                    const label = (btn.getAttribute('aria-label') || '').toLowerCase();
-                    if (/library/i.test(label) || /\\bsaved\\b/i.test(label)) {
-                        const pressed = btn.getAttribute('aria-pressed');
-                        // "Remove from library" / "Saved" => currently in library.
-                        if (pressed === 'true' || /remove|saved/i.test(label)) {
-                            inLibrary = true;
-                        }
+                const bar = document.querySelector('ytmusic-player-bar');
+                if (bar) {
+                    const ctrls = bar.querySelectorAll(
+                        'button[aria-label], button[title], yt-button-shape button, ' +
+                        'tp-yt-paper-icon-button[aria-label], [role="button"][aria-label]'
+                    );
+                    for (const c of ctrls) {
+                        // Skip like/dislike — that is rating, not library.
+                        if (c.closest('ytmusic-like-button-renderer')) { continue; }
+                        const label = ((c.getAttribute('aria-label') || '') + ' ' +
+                                       (c.getAttribute('title') || '')).toLowerCase();
+                        if (!/library|save to|saved|added to/.test(label)) { continue; }
+                        // Found the library control — resolve state.
+                        const pressed = c.getAttribute('aria-pressed');
+                        const icon = c.querySelector('yt-icon[icon], tp-yt-iron-icon[icon]');
+                        const iconName = ((icon && icon.getAttribute('icon')) || '').toLowerCase();
+                        if (pressed === 'true') { inLibrary = true; }
+                        else if (pressed === 'false') { inLibrary = false; }
+                        else if (/check|saved|library_add_check/.test(iconName)) { inLibrary = true; }
+                        else if (/remove from library|added to library|in library|\\bsaved\\b/.test(label)) { inLibrary = true; }
+                        else if (/save to library|add to library/.test(label)) { inLibrary = false; }
                         break;
                     }
                 }
