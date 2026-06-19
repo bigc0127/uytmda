@@ -27,7 +27,7 @@ struct TrackInfo: Equatable, Codable {
     let isShuffled: Bool
     let repeatMode: String
     let rating: String      // "" | "up" | "down"
-    let inLibrary: Bool
+    var inLibrary: Bool     // var: WebViewManager overlays an optimistic value after a toggle
 
     var artworkImage: NSImage?
 

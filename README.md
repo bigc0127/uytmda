@@ -127,6 +127,17 @@ The app injects JavaScript into the YouTube Music web player to:
 - Monitor player state changes
 - Adjust volume and playback settings
 
+## Integrating with other apps
+
+UYTM exposes a small, dependency-free integration surface over
+`DistributedNotificationCenter` so other apps on the same Mac can observe playback
+state (title, artist, artwork, elapsed, `rating`, `inLibrary`, …) and send commands
+(play/pause, next/previous, seek, thumbs up/down, toggle-library). This is the same
+mechanism the NotchNest companion uses — and it's open for anyone to build against.
+
+See **[INTEGRATION.md](INTEGRATION.md)** for the full contract, payload fields, and
+copy-paste Swift examples.
+
 ## Known Limitations
 
 - Requires active internet connection

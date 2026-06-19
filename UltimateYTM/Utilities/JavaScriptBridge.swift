@@ -77,35 +77,30 @@ class JavaScriptBridge {
                 }
             } catch (e) {}
 
-            // Library: find the player-bar save/library toggle (same control
-            // toggleLibraryScript() clicks) and read its on/off state. Signals are
-            // checked most-authoritative first — aria-pressed, then the swapped
-            // icon (library_add_check / saved), then the label phrasing — because a
-            // static label can lag the real state. Guarded; defaults false.
+            // Library: read the current track's save/library toggle from the
+            // player-bar action-menu DATA MODEL — no need to open the menu. YT Music
+            // exposes the menu items on `ytmusic-menu-renderer`.data; the track-level
+            // toggle's defaultText is per-track and state-driven (verified live):
+            //   "Remove from library" => in library; "Save to library" => not.
+            // Exact-anchored match excludes the playlist/mix "Save … to library"
+            // variants. BFS is bounded and fully guarded; defaults false.
             let inLibrary = false;
             try {
                 const bar = document.querySelector('ytmusic-player-bar');
-                if (bar) {
-                    const ctrls = bar.querySelectorAll(
-                        'button[aria-label], button[title], yt-button-shape button, ' +
-                        'tp-yt-paper-icon-button[aria-label], [role="button"][aria-label]'
-                    );
-                    for (const c of ctrls) {
-                        // Skip like/dislike — that is rating, not library.
-                        if (c.closest('ytmusic-like-button-renderer')) { continue; }
-                        const label = ((c.getAttribute('aria-label') || '') + ' ' +
-                                       (c.getAttribute('title') || '')).toLowerCase();
-                        if (!/library|save to|saved|added to/.test(label)) { continue; }
-                        // Found the library control — resolve state.
-                        const pressed = c.getAttribute('aria-pressed');
-                        const icon = c.querySelector('yt-icon[icon], tp-yt-iron-icon[icon]');
-                        const iconName = ((icon && icon.getAttribute('icon')) || '').toLowerCase();
-                        if (pressed === 'true') { inLibrary = true; }
-                        else if (pressed === 'false') { inLibrary = false; }
-                        else if (/check|saved|library_add_check/.test(iconName)) { inLibrary = true; }
-                        else if (/remove from library|added to library|in library|\\bsaved\\b/.test(label)) { inLibrary = true; }
-                        else if (/save to library|add to library/.test(label)) { inLibrary = false; }
-                        break;
+                const mr = bar && bar.querySelector('ytmusic-menu-renderer');
+                if (mr) {
+                    const roots = [mr.data, mr.__data].filter(Boolean);
+                    const q = roots.slice(); const visited = []; let count = 0;
+                    while (q.length && count < 4000) {
+                        const o = q.shift(); count++;
+                        if (!o || typeof o !== 'object' || visited.indexOf(o) !== -1) { continue; }
+                        visited.push(o);
+                        try {
+                            const dt = o.defaultText && o.defaultText.runs && o.defaultText.runs[0] && o.defaultText.runs[0].text;
+                            if (dt && /^remove from library$/i.test(dt)) { inLibrary = true; break; }
+                            if (dt && /^save to library$/i.test(dt)) { inLibrary = false; break; }
+                        } catch (e) {}
+                        for (const k in o) { try { const v = o[k]; if (v && typeof v === 'object') { q.push(v); } } catch (e) {} }
                     }
                 }
             } catch (e) {}
@@ -248,39 +243,76 @@ class JavaScriptBridge {
         """
     }
 
-    static func toggleLibraryScript() -> String {
-        """
+    /// Toggles the current track's library membership by sending YT Music's own
+    /// library-edit feedback request — no menu UI, no clicks, no rendering — so it
+    /// works while the window is minimized/occluded (the NotchNest case).
+    /// `currentlyInLibrary` is UYTM's known state; it selects the directional
+    /// endpoint so repeated toggles stay correct even if the cached menu text is
+    /// stale. Returns "added" / "removed" (the new state) or "nochange".
+    static func toggleLibraryScript(currentlyInLibrary: Bool) -> String {
+        let want = currentlyInLibrary ? "remove from library" : "save to library"
+        let newState = currentlyInLibrary ? "removed" : "added"
+        return """
         (function() {
-            const bar = document.querySelector('ytmusic-player-bar');
-            if (!bar) { return false; }
+            var bar = document.querySelector('ytmusic-player-bar');
+            var mr = bar && bar.querySelector('ytmusic-menu-renderer');
+            if (!mr) { return 'nochange'; }
 
-            // 1. Direct library toggle in the player bar, if present.
-            const directBtns = bar.querySelectorAll('button[aria-label], yt-button-shape button[aria-label]');
-            for (const b of directBtns) {
-                const label = (b.getAttribute('aria-label') || '');
-                if (/library/i.test(label)) { b.click(); return true; }
+            // Find the track's library toggle in the player-bar menu DATA (current
+            // track, render-free). BFS is bounded and fully guarded.
+            var roots = [mr.data, mr.__data].filter(Boolean);
+            var q = roots.slice(), visited = [], count = 0, item = null;
+            while (q.length && count < 6000) {
+                var o = q.shift(); count++;
+                if (!o || typeof o !== 'object' || visited.indexOf(o) !== -1) { continue; }
+                visited.push(o);
+                try {
+                    var dt = o.defaultText && o.defaultText.runs && o.defaultText.runs[0] && o.defaultText.runs[0].text;
+                    var tt = o.toggledText && o.toggledText.runs && o.toggledText.runs[0] && o.toggledText.runs[0].text;
+                    if (((dt && /^(save to|remove from) library$/i.test(dt)) ||
+                         (tt && /^(save to|remove from) library$/i.test(tt))) &&
+                        (o.defaultServiceEndpoint || o.toggledServiceEndpoint)) { item = o; break; }
+                } catch(e){}
+                for (var k in o) { try { var v = o[k]; if (v && typeof v === 'object') { q.push(v); } } catch(e){} }
             }
+            if (!item) { return 'nochange'; }
 
-            // 2. Otherwise open the overflow ("...") menu and click the library item.
-            const menuBtn = bar.querySelector('ytmusic-menu-renderer button, .menu button, button[aria-label*="more" i], yt-button-shape button[aria-label*="more" i]');
-            if (!menuBtn) { return false; }
-            menuBtn.click();
+            // Pick the endpoint whose paired label matches the action we WANT, so the
+            // direction is right even if the cached menu text lags actual state.
+            function txt(r){ return ((r && r.runs && r.runs[0] && r.runs[0].text) || '').toLowerCase(); }
+            var want = '\(want)';
+            var ep = null;
+            if (txt(item.defaultText) === want) { ep = item.defaultServiceEndpoint; }
+            else if (txt(item.toggledText) === want) { ep = item.toggledServiceEndpoint; }
+            if (!ep || !(ep.feedbackEndpoint && ep.feedbackEndpoint.feedbackToken)) {
+                ep = item.defaultServiceEndpoint || item.toggledServiceEndpoint;
+            }
+            var token = ep && ep.feedbackEndpoint && ep.feedbackEndpoint.feedbackToken;
+            if (!token) { return 'nochange'; }
 
-            // Menu renders into a popup container; query after a short delay.
-            setTimeout(function() {
-                const items = document.querySelectorAll('ytmusic-menu-popup-renderer tp-yt-paper-listbox ytmusic-menu-navigation-item-renderer, ytmusic-menu-popup-renderer ytmusic-menu-service-item-renderer, tp-yt-paper-item');
-                for (const item of items) {
-                    const text = (item.textContent || '') + ' ' + (item.getAttribute('aria-label') || '');
-                    if (/library/i.test(text)) {
-                        const clickable = item.querySelector('button') || item;
-                        clickable.click();
-                        return;
-                    }
-                }
-                // Nothing matched: close the menu to avoid leaving it open.
-                document.body.click();
-            }, 250);
-            return true;
+            // Send it the way YT Music does internally: POST the feedbackToken to
+            // /youtubei/v1/feedback with the InnerTube key+context and a SAPISIDHASH
+            // Authorization header (computed from the SAPISID cookie).
+            function sapisidHash(){
+                var m = document.cookie.match(/(?:^|;\\s*)SAPISID=([^;]+)/) || document.cookie.match(/(?:^|;\\s*)__Secure-3PAPISID=([^;]+)/);
+                if (!m) { return Promise.resolve(null); }
+                var sapisid = m[1], origin = 'https://music.youtube.com', ts = Math.floor(Date.now()/1000);
+                return crypto.subtle.digest('SHA-1', new TextEncoder().encode(ts+' '+sapisid+' '+origin)).then(function(buf){
+                    var hex = Array.prototype.map.call(new Uint8Array(buf), function(b){ return ('0'+b.toString(16)).slice(-2); }).join('');
+                    return 'SAPISIDHASH '+ts+'_'+hex;
+                });
+            }
+            var key = (window.ytcfg && ytcfg.get && ytcfg.get('INNERTUBE_API_KEY')) || '';
+            var apictx = (window.ytcfg && ytcfg.get && ytcfg.get('INNERTUBE_CONTEXT')) || {};
+            sapisidHash().then(function(auth){
+                var headers = { 'Content-Type':'application/json', 'X-Origin':'https://music.youtube.com' };
+                if (auth) { headers['Authorization'] = auth; }
+                return fetch('/youtubei/v1/feedback?key='+key+'&prettyPrint=false', {
+                    method:'POST', credentials:'include', headers:headers,
+                    body: JSON.stringify({ context: apictx, feedbackTokens: [token] })
+                });
+            }).catch(function(){});
+            return '\(newState)';
         })();
         """
     }

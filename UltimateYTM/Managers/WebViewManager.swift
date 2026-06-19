@@ -29,6 +29,13 @@ class WebViewManager: NSObject {
     private(set) var webView: WKWebView!
     private nonisolated(unsafe) var trackInfoTimer: Timer?
     private(set) var currentTrackInfo: TrackInfo = .empty
+
+    // After a library toggle, YT Music's in-page menu data stays cached until the
+    // track genuinely reloads, so a re-read reports stale state. We optimistically
+    // overlay the new value (keyed by track title) so the broadcast is correct
+    // immediately; it clears once the track changes and fresh data takes over.
+    private var libraryOverrideTitle: String?
+    private var libraryOverrideValue = false
     
     private let youTubeMusicURL = URL(string: "https://music.youtube.com")!
     
@@ -173,10 +180,20 @@ class WebViewManager: NSObject {
             
             guard let jsonString = result as? String,
                   let jsonData = jsonString.data(using: .utf8),
-                  let trackInfo = try? JSONDecoder().decode(TrackInfo.self, from: jsonData) else {
+                  var trackInfo = try? JSONDecoder().decode(TrackInfo.self, from: jsonData) else {
                 return
             }
-            
+
+            // Apply the optimistic library override while it's the same track; once
+            // the track changes, drop it and trust the freshly-read state.
+            if let overrideTitle = libraryOverrideTitle {
+                if overrideTitle == trackInfo.title {
+                    trackInfo.inLibrary = libraryOverrideValue
+                } else {
+                    libraryOverrideTitle = nil
+                }
+            }
+
             if trackInfo != currentTrackInfo {
                 currentTrackInfo = trackInfo
                 
@@ -253,9 +270,17 @@ class WebViewManager: NSObject {
     }
 
     func toggleLibrary() async {
-        _ = try? await webView.evaluateJavaScript(JavaScriptBridge.toggleLibraryScript())
-        // Library toggle may route through the overflow menu (~250ms delay there).
-        _ = try? await Task.sleep(nanoseconds: 600_000_000) // 0.6 seconds
+        let wasInLibrary = currentTrackInfo.inLibrary
+        let result = try? await webView.evaluateJavaScript(
+            JavaScriptBridge.toggleLibraryScript(currentlyInLibrary: wasInLibrary))
+        // Optimistically record the new state (the feedback POST is reliable; fresh
+        // track data corrects it on the next load if it ever fails).
+        if let state = result as? String, state != "nochange" {
+            libraryOverrideTitle = currentTrackInfo.title
+            libraryOverrideValue = (state == "added")
+        }
+        // Let the feedback request round-trip, then refresh + broadcast.
+        _ = try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
         await updateTrackInfo()
     }
 
