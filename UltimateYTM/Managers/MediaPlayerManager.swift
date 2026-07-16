@@ -14,140 +14,133 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import Foundation
-import MediaPlayer
 import AppKit
+import NowPlaying
+import Observation
+import os
 
+/// System media integration, built on the macOS 27 **NowPlaying** framework
+/// (`MediaSession`) rather than the legacy `MPNowPlayingInfoCenter` /
+/// `MPRemoteCommandCenter`. A single `MediaSession` is the sole source of truth for
+/// the system now-playing UI (Control Center, lock screen, CarPlay) and for remote
+/// commands including hardware media keys.
+///
+/// The public surface (`on*` callbacks, `updateNowPlayingInfo(with:)`,
+/// `clearNowPlayingInfo()`) is unchanged from the previous MediaPlayer-based
+/// implementation, so callers in `MainWindowController` need no changes.
 @MainActor
-class MediaPlayerManager: NSObject {
+final class MediaPlayerManager: NSObject {
     static let shared = MediaPlayerManager()
-    
-    private var commandCenter: MPRemoteCommandCenter {
-        MPRemoteCommandCenter.shared()
-    }
-    
-    private var nowPlayingInfo: MPNowPlayingInfoCenter {
-        MPNowPlayingInfoCenter.default()
-    }
-    
+
     var onPlayPause: (() async -> Void)?
     var onNext: (() async -> Void)?
     var onPrevious: (() async -> Void)?
     var onSeek: ((TimeInterval) async -> Void)?
-    
+
+    private let log = Logger(subsystem: "com.ultimateytm.app", category: "NowPlaying")
+
+    /// Reference type the `MediaSession` observes. Marked `@Observable` so mutations to
+    /// `content` / `playbackSnapshot` propagate to the system without an explicit update
+    /// call (local `MediaSession` has no `update(_:)`; it tracks the representable via
+    /// Observation).
+    @Observable
+    @MainActor
+    final class NowPlayingRepresentable: MediaSessionRepresentable {
+        let id = "com.ultimateytm.app.session"
+        var content: (any MediaContentRepresentable)?
+        var playbackSnapshot: MediaPlaybackSnapshot?
+        var commands: [MediaCommand] = []
+    }
+
+    private let representable = NowPlayingRepresentable()
+    private var session: MediaSession<NowPlayingRepresentable>?
+
     private override init() {
         super.init()
-        setupRemoteCommandCenter()
+        representable.commands = buildCommands()
+        let session = MediaSession(representable)
+        self.session = session
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await session.requestToBecomeApplicationPrimary()
+                self.log.info("NowPlaying MediaSession became application-primary")
+            } catch {
+                self.log.error("requestToBecomeApplicationPrimary failed: \(String(describing: error), privacy: .public)")
+            }
+        }
     }
-    
-    private func setupRemoteCommandCenter() {
-        // Play command
-        commandCenter.playCommand.isEnabled = true
-        commandCenter.playCommand.addTarget { [weak self] event in
-            Task { @MainActor in
+
+    private func buildCommands() -> [MediaCommand] {
+        [
+            .togglePlayPause { [weak self] in
+                self?.log.debug("remote: togglePlayPause")
                 await self?.onPlayPause?()
-            }
-            return .success
-        }
-        
-        // Pause command
-        commandCenter.pauseCommand.isEnabled = true
-        commandCenter.pauseCommand.addTarget { [weak self] event in
-            Task { @MainActor in
+            },
+            .play { [weak self] in
+                self?.log.debug("remote: play")
                 await self?.onPlayPause?()
-            }
-            return .success
-        }
-        
-        // Toggle play/pause
-        commandCenter.togglePlayPauseCommand.isEnabled = true
-        commandCenter.togglePlayPauseCommand.addTarget { [weak self] event in
-            Task { @MainActor in
+            },
+            .pause { [weak self] in
+                self?.log.debug("remote: pause")
                 await self?.onPlayPause?()
-            }
-            return .success
-        }
-        
-        // Next track
-        commandCenter.nextTrackCommand.isEnabled = true
-        commandCenter.nextTrackCommand.addTarget { [weak self] event in
-            Task { @MainActor in
+            },
+            .next { [weak self] in
+                self?.log.debug("remote: next")
                 await self?.onNext?()
-            }
-            return .success
-        }
-        
-        // Previous track
-        commandCenter.previousTrackCommand.isEnabled = true
-        commandCenter.previousTrackCommand.addTarget { [weak self] event in
-            Task { @MainActor in
+            },
+            .previous { [weak self] in
+                self?.log.debug("remote: previous")
                 await self?.onPrevious?()
+            },
+            .seekToPosition { [weak self] position in
+                self?.log.debug("remote: seek \(position)")
+                await self?.onSeek?(position)
             }
-            return .success
-        }
-        
-        // Seek commands
-        commandCenter.changePlaybackPositionCommand.isEnabled = true
-        commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
-            guard let event = event as? MPChangePlaybackPositionCommandEvent else {
-                return .commandFailed
-            }
-            Task { @MainActor in
-                await self?.onSeek?(event.positionTime)
-            }
-            return .success
-        }
+        ]
     }
-    
+
     func updateNowPlayingInfo(with trackInfo: TrackInfo) {
-        var info: [String: Any] = [:]
-        
-        info[MPMediaItemPropertyTitle] = trackInfo.title
-        info[MPMediaItemPropertyArtist] = trackInfo.artist
-        info[MPMediaItemPropertyAlbumTitle] = trackInfo.album
-        info[MPMediaItemPropertyPlaybackDuration] = trackInfo.duration
-        info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = trackInfo.currentTime
-        info[MPNowPlayingInfoPropertyPlaybackRate] = trackInfo.isPaused ? 0.0 : 1.0
-        
-        // Set artwork if available
-        if let artworkImage = trackInfo.artworkImage {
-            // Ensure artwork has a valid size
-            let artworkSize = artworkImage.size.width > 0 && artworkImage.size.height > 0 
-                ? artworkImage.size 
-                : NSSize(width: 512, height: 512)
-            
-            info[MPMediaItemPropertyArtwork] = Self.makeArtwork(image: artworkImage, boundsSize: artworkSize)
-        }
-
-        nowPlayingInfo.nowPlayingInfo = info
+        let duration: MediaDuration? = trackInfo.duration > 0 ? .finite(trackInfo.duration) : nil
+        let content = MusicContent(
+            id: trackInfo.title + "|" + trackInfo.artist,
+            songTitle: trackInfo.title,
+            artistName: trackInfo.artist,
+            albumName: trackInfo.album,
+            type: .audio,
+            duration: duration,
+            artwork: Self.makeArtwork(from: trackInfo.artworkImage)
+        )
+        representable.content = content
+        representable.playbackSnapshot = MediaPlaybackSnapshot(
+            state: trackInfo.isPaused ? .paused : .playing(rate: 1.0),
+            elapsedTime: trackInfo.currentTime
+        )
     }
 
-    /// Builds an `MPMediaItemArtwork` whose request handler is **not** main-actor isolated.
-    /// MediaPlayer invokes the handler on its own background dispatch queue; if the closure
-    /// inherits this class's `@MainActor` isolation, Swift's concurrency runtime fires an
-    /// executor-isolation assertion (`EXC_BREAKPOINT` / `dispatch_assert_queue_fail`) when it
-    /// runs off the main thread, crashing the app on every now-playing update that has artwork.
-    /// Declaring the helper `nonisolated` strips the isolation so the handler is safe to run
-    /// from MediaPlayer's queue.
-    nonisolated private static func makeArtwork(image artworkImage: NSImage, boundsSize: NSSize) -> MPMediaItemArtwork {
-        MPMediaItemArtwork(boundsSize: boundsSize) { requestedSize in
-            // Return the original image or resize if needed
-            if requestedSize == artworkImage.size {
-                return artworkImage
-            }
-
-            // Resize image to requested size
-            let resizedImage = NSImage(size: requestedSize)
-            resizedImage.lockFocus()
-            artworkImage.draw(in: NSRect(origin: .zero, size: requestedSize),
-                            from: NSRect(origin: .zero, size: artworkImage.size),
-                            operation: .copy,
-                            fraction: 1.0)
-            resizedImage.unlockFocus()
-            return resizedImage
-        }
-    }
-    
     func clearNowPlayingInfo() {
-        nowPlayingInfo.nowPlayingInfo = nil
+        representable.content = nil
+        representable.playbackSnapshot = MediaPlaybackSnapshot(state: .stopped)
     }
+
+    /// Builds a NowPlaying `Artwork` whose provider closure is `@Sendable` and captures an
+    /// immutable `CGImage`. Kept `nonisolated` and free of `@MainActor` capture so the
+    /// framework may invoke the provider on any queue — the same off-main-callback hazard
+    /// that caused the v1.0.3 artwork crash under the old `MPMediaItemArtwork` handler.
+    nonisolated private static func makeArtwork(from image: NSImage?) -> Artwork? {
+        guard let image,
+              let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
+        else { return nil }
+        let sendableImage = SendableCGImage(cgImage)
+        return Artwork(id: "com.ultimateytm.app.artwork") { _ in
+            try ArtworkRepresentation(cgImage: sendableImage.image)
+        }
+    }
+}
+
+/// `CGImage` is immutable but not formally `Sendable`; wrap it so it can be captured in the
+/// `@Sendable` artwork provider without a concurrency diagnostic.
+private struct SendableCGImage: @unchecked Sendable {
+    let image: CGImage
+    init(_ image: CGImage) { self.image = image }
 }
