@@ -284,5 +284,40 @@ extension AudioCaptureManager: SCStreamOutput {
     nonisolated func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
         guard type == .audio else { return }
         processAudioBuffer(sampleBuffer)
+
+        // Additionally forward the raw PCM to the macOS 27 MusicUnderstanding analyzer, only
+        // while it wants buffers. Failure here is silent — the FFT visualizer is unaffected.
+        if MusicAnalysisFeed.shared.isActive,
+           let readOnly = Self.makeReadOnlyBuffer(sampleBuffer) {
+            MusicAnalysisFeed.shared.yield(readOnly)
+        }
+    }
+}
+
+extension AudioCaptureManager {
+    /// Converts a captured audio `CMSampleBuffer` into an `AVReadOnlyAudioPCMBuffer` for
+    /// MusicUnderstanding. Returns nil on any format/copy failure (caller ignores nil).
+    nonisolated static func makeReadOnlyBuffer(_ sampleBuffer: CMSampleBuffer) -> AVReadOnlyAudioPCMBuffer? {
+        guard let formatDesc = CMSampleBufferGetFormatDescription(sampleBuffer),
+              let asbdPtr = CMAudioFormatDescriptionGetStreamBasicDescription(formatDesc)
+        else { return nil }
+        var asbd = asbdPtr.pointee
+        guard let format = AVAudioFormat(streamDescription: &asbd) else { return nil }
+
+        let frames = CMSampleBufferGetNumSamples(sampleBuffer)
+        guard frames > 0,
+              let pcm = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frames))
+        else { return nil }
+        pcm.frameLength = AVAudioFrameCount(frames)
+
+        let status = CMSampleBufferCopyPCMDataIntoAudioBufferList(
+            sampleBuffer,
+            at: 0,
+            frameCount: Int32(frames),
+            into: pcm.mutableAudioBufferList
+        )
+        guard status == noErr else { return nil }
+
+        return AVReadOnlyAudioPCMBuffer(copying: pcm)
     }
 }

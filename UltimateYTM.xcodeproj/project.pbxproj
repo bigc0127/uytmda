@@ -24,6 +24,7 @@
 		2A000029000000000000000A /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000030000000000000000B /* AuthenticationManager.swift */; };
 		2A000033000000000000000A /* RainbowEqualizerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000034000000000000000A /* RainbowEqualizerView.swift */; };
 		2A000035000000000000000A /* AudioCaptureManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000036000000000000000A /* AudioCaptureManager.swift */; };
+		2A0000F1000000000000000A /* MusicAnalysisManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000F2000000000000000A /* MusicAnalysisManager.swift */; };
 		2A000037000000000000000A /* UpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A000038000000000000000A /* UpdateManager.swift */; };
 		2A000039000000000000000A /* GitHubRelease.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A00003A000000000000000A /* GitHubRelease.swift */; };
 		2A0000CB000000000000000A /* CookieBackupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000CC000000000000000A /* CookieBackupManager.swift */; };
@@ -51,6 +52,7 @@
 		2A000032000000000000000A /* UltimateYTM.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = UltimateYTM.entitlements; sourceTree = "<group>"; };
 		2A000034000000000000000A /* RainbowEqualizerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RainbowEqualizerView.swift; sourceTree = "<group>"; };
 		2A000036000000000000000A /* AudioCaptureManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCaptureManager.swift; sourceTree = "<group>"; };
+		2A0000F2000000000000000A /* MusicAnalysisManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicAnalysisManager.swift; sourceTree = "<group>"; };
 		2A000038000000000000000A /* UpdateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateManager.swift; sourceTree = "<group>"; };
 		2A00003A000000000000000A /* GitHubRelease.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubRelease.swift; sourceTree = "<group>"; };
 		2A0000CC000000000000000A /* CookieBackupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookieBackupManager.swift; sourceTree = "<group>"; };
@@ -121,6 +123,7 @@
 				2A000024000000000000000A /* NotificationManager.swift */,
 				2A000030000000000000000B /* AuthenticationManager.swift */,
 				2A000036000000000000000A /* AudioCaptureManager.swift */,
+				2A0000F2000000000000000A /* MusicAnalysisManager.swift */,
 				2A000038000000000000000A /* UpdateManager.swift */,
 				2A0000CC000000000000000A /* CookieBackupManager.swift */,
 				2A0000DE000000000000000A /* NotchBridge.swift */,
@@ -239,6 +242,7 @@
 				2A000029000000000000000A /* AuthenticationManager.swift in Sources */,
 				2A000033000000000000000A /* RainbowEqualizerView.swift in Sources */,
 				2A000035000000000000000A /* AudioCaptureManager.swift in Sources */,
+				2A0000F1000000000000000A /* MusicAnalysisManager.swift in Sources */,
 				2A000037000000000000000A /* UpdateManager.swift in Sources */,
 				2A000039000000000000000A /* GitHubRelease.swift in Sources */,
 				2A0000CB000000000000000A /* CookieBackupManager.swift in Sources */,
