@@ -15,10 +15,14 @@
 
 import AppKit
 import QuartzCore
+import CoreImage
 
 final class RainbowEqualizerView: NSView {
     private let barCount = 32
-    private let barSpacing: CGFloat = 2
+    private let barSpacing: CGFloat = 0
+    /// Gaussian blur radius applied to the bar mask so adjacent bars bleed into each other and
+    /// the tops soften — turning discrete bars into a continuous "dancing wall of color".
+    private let wallBlurRadius: CGFloat = 9
     private let minBarHeightFactor: CGFloat = 0.08
     private let maxBarHeightFactor: CGFloat = 0.95
     private let peakDotHeight: CGFloat = 3
@@ -79,8 +83,14 @@ final class RainbowEqualizerView: NSView {
         let step = 1.0 / Double(colors.count - 1)
         gradientLayer.locations = (0..<colors.count).map { NSNumber(value: Double($0) * step) }
 
-        barsContainerLayer.masksToBounds = true
+        // Don't clip the mask to its bounds, so the blur can bleed the bar tops into a soft wall.
+        barsContainerLayer.masksToBounds = false
         barsContainerLayer.backgroundColor = NSColor.clear.cgColor
+        // Blur the mask: adjacent (now touching) bars merge and heights flow into each other,
+        // yielding a continuous wall of color rather than separate bars.
+        if let blur = CIFilter(name: "CIGaussianBlur", parameters: [kCIInputRadiusKey: wallBlurRadius]) {
+            barsContainerLayer.filters = [blur]
+        }
         gradientLayer.mask = barsContainerLayer
 
         backingLayer.addSublayer(gradientLayer)
@@ -113,7 +123,9 @@ final class RainbowEqualizerView: NSView {
             peak.bounds = CGRect(x: 0, y: 0, width: barWidth, height: peakDotHeight)
             peak.cornerRadius = peakDotHeight / 2
             peak.backgroundColor = NSColor.white.cgColor
-            barsContainerLayer.addSublayer(peak)
+            // Peak dots are intentionally NOT added to the mask: as a blurred wall of color,
+            // floating peak markers read as drifting blobs. Kept in the array (still tracked
+            // for gravity math) but not rendered.
             peakLayers.append(peak)
         }
     }
