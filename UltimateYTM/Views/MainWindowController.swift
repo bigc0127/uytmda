@@ -92,6 +92,21 @@ class MainWindowController: NSWindowController {
         AudioCaptureManager.shared.onAudioLevelsUpdated = { [weak self] levels in
             self?.dockEqualizerView?.applyLevels(levels)
         }
+        // macOS 27 MusicUnderstanding: perceptual loudness modulates the rainbow brightness.
+        MusicAnalysisManager.shared.onEnergyUpdated = { [weak self] energy in
+            self?.dockEqualizerView?.applyEnergy(energy)
+        }
+    }
+
+    /// Toggles the dock equalizer's play state and starts/stops MusicUnderstanding loudness
+    /// analysis in lockstep, so on-device analysis only runs while music is actually playing.
+    private func updateEqualizerPlayState(_ playing: Bool) {
+        dockEqualizerView?.setPlaying(playing)
+        if playing && dockEqualizerView != nil {
+            MusicAnalysisManager.shared.start()
+        } else {
+            MusicAnalysisManager.shared.stop()
+        }
     }
 
     private var dockTrackingTimer: Timer?
@@ -303,7 +318,7 @@ private func dockListFrameViaAccessibility(on screen: NSScreen) -> NSRect? {
         Task { @MainActor in
             installDockEqualizerOverlay()
             if AppSettings.shared.showEqualizer {
-                dockEqualizerView?.setPlaying(currentTrackInfo.isValid && !currentTrackInfo.isPaused)
+                updateEqualizerPlayState(currentTrackInfo.isValid && !currentTrackInfo.isPaused)
             }
         }
     }
@@ -347,7 +362,7 @@ extension MainWindowController: WebViewManagerDelegate {
 
         window?.title = trackInfo.isValid ? "\(trackInfo.title) — \(trackInfo.artist)" : "Ultimate YTM"
         NotificationCenter.default.post(name: .trackInfoUpdated, object: trackInfo)
-        dockEqualizerView?.setPlaying(trackInfo.isValid && !trackInfo.isPaused)
+        updateEqualizerPlayState(trackInfo.isValid && !trackInfo.isPaused)
     }
 
     func webViewManagerDidLoad(_ manager: WebViewManager) {

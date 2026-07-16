@@ -23,31 +23,37 @@ class LiquidGlassWindow: NSWindow {
         configure()
     }
 
+    private var glassView: NSGlassEffectView?
+
     private func configure() {
         titlebarAppearsTransparent = true
         titleVisibility = .visible
         isMovableByWindowBackground = true
         animationBehavior = .documentWindow
-        installVisualEffectBackground()
+        installGlassBackground()
     }
 
-    private func installVisualEffectBackground() {
+    /// Installs a macOS 27 Liquid Glass background (`NSGlassEffectView`) behind the window
+    /// content. It shows through the transparent titlebar and any translucent regions, with
+    /// interactive glass feedback enabled. Replaces the legacy `NSVisualEffectView` backing.
+    private func installGlassBackground() {
         guard let contentView = contentView else { return }
-        let effect = NSVisualEffectView(frame: contentView.bounds)
-        effect.material = .underWindowBackground
-        effect.blendingMode = .behindWindow
-        effect.state = .followsWindowActiveState
-        effect.autoresizingMask = [.width, .height]
-        contentView.addSubview(effect, positioned: .below, relativeTo: nil)
+        let glass = NSGlassEffectView(frame: contentView.bounds)
+        glass.style = .regular
+        glass.cornerRadius = 0
+        glass.effectIsInteractive = true
+        glass.autoresizingMask = [.width, .height]
+        contentView.addSubview(glass, positioned: .below, relativeTo: nil)
+        glassView = glass
     }
 
-    func updateGlassMaterial(_ material: NSVisualEffectView.Material) {
-        guard let effect = contentView?.subviews.compactMap({ $0 as? NSVisualEffectView }).first else { return }
-        effect.material = material
+    /// Tints the glass toward a color (nil = untinted).
+    func setGlassTint(_ color: NSColor?) {
+        glassView?.tintColor = color
     }
 
-    func updateBlendingMode(_ mode: NSVisualEffectView.BlendingMode) {
-        guard let effect = contentView?.subviews.compactMap({ $0 as? NSVisualEffectView }).first else { return }
-        effect.blendingMode = mode
+    /// Switches between the standard (`.regular`) and `.clear` glass styles.
+    func setGlassStyle(_ style: NSGlassEffectView.Style) {
+        glassView?.style = style
     }
 }

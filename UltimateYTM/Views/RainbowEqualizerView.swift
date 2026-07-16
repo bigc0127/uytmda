@@ -35,6 +35,12 @@ final class RainbowEqualizerView: NSView {
     private var animationTimer: Timer?
     private var isPlaying: Bool = false
 
+    /// Perceptual-loudness intensity (0...1) supplied by the macOS 27 MusicUnderstanding
+    /// framework (momentary LUFS). Modulates the rainbow's overall brightness so quiet
+    /// passages dim and loud passages blaze — a semantic layer on top of the raw FFT bars.
+    /// Defaults to full brightness so the view looks unchanged if analysis is unavailable.
+    private var energy: CGFloat = 1.0
+
     override init(frame frameRect: NSRect) {
         barLevels = Array(repeating: 0, count: barCount)
         peakLevels = Array(repeating: 0, count: barCount)
@@ -154,7 +160,8 @@ final class RainbowEqualizerView: NSView {
     private func startTicking() {
         guard animationTimer == nil else { return }
         let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
-            self?.tick()
+            // Timer fires on the main run loop; hop the isolation to satisfy Swift 6.
+            MainActor.assumeIsolated { self?.tick() }
         }
         RunLoop.main.add(timer, forMode: .common)
         animationTimer = timer
@@ -202,6 +209,20 @@ final class RainbowEqualizerView: NSView {
 
         if animationTimer == nil { startTicking() }
         renderLevels(animated: false)
+    }
+
+    /// Public API: feed perceptual loudness (0...1) from MusicUnderstanding. Maps to the
+    /// rainbow's overall brightness. Clamped and eased into a floor so the bars never fully
+    /// vanish even in near-silence.
+    func applyEnergy(_ value: Double) {
+        let clamped = CGFloat(max(0, min(1, value)))
+        // Ease toward the new value; keep a 0.45 brightness floor.
+        let target = 0.45 + 0.55 * clamped
+        energy += 0.25 * (target - energy)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        gradientLayer.opacity = Float(energy)
+        CATransaction.commit()
     }
 
     private func renderLevels(animated: Bool) {
