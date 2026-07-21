@@ -110,10 +110,43 @@ class MainWindowController: NSWindowController {
     }
 
     private var dockTrackingTimer: Timer?
+    private var dockBurstTimer: Timer?
+    private var dockBurstTicks = 0
 
     private func observeSettings() {
         NotificationCenter.default.addObserver(self, selector: #selector(settingsChanged), name: .equalizerSettingChanged, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(screenParametersChanged), name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        let wsCenter = NSWorkspace.shared.notificationCenter
+        wsCenter.addObserver(self, selector: #selector(runningAppsChanged), name: NSWorkspace.didLaunchApplicationNotification, object: nil)
+        wsCenter.addObserver(self, selector: #selector(runningAppsChanged), name: NSWorkspace.didTerminateApplicationNotification, object: nil)
+    }
+
+    @objc private func runningAppsChanged() {
+        Task { @MainActor in self.burstTrackDockResize() }
+    }
+
+    /// Follow the Dock's own grow/shrink animation after an app launches or quits:
+    /// re-read the pill frame at 10 Hz for 2 s, then fall back to the 1 s steady poll.
+    private func burstTrackDockResize() {
+        dockBurstTimer?.invalidate()
+        dockBurstTicks = 0
+        // The timer param stays outside the isolated closure: touching it inside trips
+        // Swift 6 region isolation (task-isolated value captured by @MainActor closure).
+        let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] t in
+            let done = MainActor.assumeIsolated { () -> Bool in
+                guard let self else { return true }
+                self.dockBurstTicks += 1
+                self.updateDockEqualizerFrame()
+                if self.dockBurstTicks >= 20 {
+                    self.dockBurstTimer = nil
+                    return true
+                }
+                return false
+            }
+            if done { t.invalidate() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        dockBurstTimer = timer
     }
 
     @objc private func screenParametersChanged() {
@@ -172,6 +205,8 @@ class MainWindowController: NSWindowController {
     private func tearDownDockEqualizerOverlay() {
         dockTrackingTimer?.invalidate()
         dockTrackingTimer = nil
+        dockBurstTimer?.invalidate()
+        dockBurstTimer = nil
         dockEqualizerWindow?.orderOut(nil)
         dockEqualizerWindow = nil
         dockEqualizerView = nil
@@ -197,6 +232,10 @@ class MainWindowController: NSWindowController {
         }
         if dockEqualizerWindow?.frame != frame {
             dockEqualizerWindow?.setFrame(frame, display: true)
+            if let screen = window?.screen ?? NSScreen.main {
+                let isPill = isDockPillFrame(frame, screen: screen)
+                dockEqualizerWindow?.contentView?.layer?.cornerRadius = isPill ? min(frame.height / 2, 24) : 0
+            }
         }
     }
 
