@@ -125,6 +125,16 @@ final class UpdateManager: NSObject {
                 return
             }
 
+            // OS gate: never offer a build this Mac can't run (marker `min-os: X.Y`
+            // in the release notes). Without it, a user on an older macOS would
+            // install an update that no longer launches.
+            if let minOS = release.minimumOSVersion,
+               !ProcessInfo.processInfo.isOperatingSystemAtLeast(minOS) {
+                logger.info("v\(latest) requires macOS \(minOS.majorVersion).\(minOS.minorVersion)+ — not offering")
+                if userInitiated { presentRequiresNewerOSAlert(version: latest, minOS: minOS) }
+                return
+            }
+
             // Honor "Skip This Version" unless the user explicitly initiated.
             if !userInitiated,
                let skipped = AppSettings.shared.skippedUpdateVersion,
@@ -190,6 +200,17 @@ final class UpdateManager: NSObject {
         default:
             break
         }
+    }
+
+    private func presentRequiresNewerOSAlert(version: String, minOS: OperatingSystemVersion) {
+        let running = ProcessInfo.processInfo.operatingSystemVersion
+        let alert = NSAlert()
+        alert.messageText = "Update Requires a Newer macOS"
+        alert.informativeText = "Ultimate YTM v\(version) requires macOS \(minOS.majorVersion).\(minOS.minorVersion) or later. "
+            + "You're running macOS \(running.majorVersion).\(running.minorVersion), so v\(currentVersion) is the latest version for this Mac."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        _ = alert.runModal()
     }
 
     private func presentUpToDateAlert() {
