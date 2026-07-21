@@ -62,6 +62,26 @@ struct GitHubRelease: Codable, Sendable {
         assets.first { $0.name.lowercased().hasSuffix(".zip") }
     }
 
+    /// Optional macOS floor parsed from the release body — the OS gate that keeps
+    /// updaters on older systems from offering an incompatible build.
+    /// Format expected on its own line: `min-os: 27.0` (case-insensitive; 2-3 components).
+    var minimumOSVersion: OperatingSystemVersion? {
+        guard let body else { return nil }
+        for line in body.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard trimmed.lowercased().hasPrefix("min-os:") else { continue }
+            let value = trimmed.dropFirst("min-os:".count).trimmingCharacters(in: .whitespaces)
+            let parts = value.split(separator: ".").map { Int($0) }
+            guard parts.count >= 2, parts.count <= 3, parts.allSatisfy({ $0 != nil }) else { continue }
+            return OperatingSystemVersion(
+                majorVersion: parts[0]!,
+                minorVersion: parts[1]!,
+                patchVersion: parts.count > 2 ? parts[2]! : 0
+            )
+        }
+        return nil
+    }
+
     /// Optional SHA-256 hex string parsed from the release body.
     /// Format expected on its own line: `SHA256: <64-hex-chars>`.
     var expectedSHA256: String? {
