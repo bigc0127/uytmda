@@ -210,9 +210,24 @@ class MainWindowController: NSWindowController {
         dockEqualizerWindow?.orderOut(nil)
         dockEqualizerWindow = nil
         dockEqualizerView = nil
+        if let activity = dockTrackingActivity {
+            ProcessInfo.processInfo.endActivity(activity)
+            dockTrackingActivity = nil
+        }
     }
 
+    private var dockTrackingActivity: NSObjectProtocol?
+
     private func startDockTracking() {
+        // App Nap freezes our timers when the main window is minimized/occluded, so the
+        // overlay stops tracking the Dock until the app regains focus. Declare an
+        // activity while the overlay lives (allows idle system sleep, only blocks nap).
+        if dockTrackingActivity == nil {
+            dockTrackingActivity = ProcessInfo.processInfo.beginActivity(
+                options: .userInitiatedAllowingIdleSystemSleep,
+                reason: "Dock equalizer tracks Dock size"
+            )
+        }
         dockTrackingTimer?.invalidate()
         let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.updateDockEqualizerFrame() }
