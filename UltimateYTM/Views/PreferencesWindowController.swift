@@ -92,7 +92,7 @@ private struct GeneralPane: View {
                             .onChange(of: equalizerWidth) { _, newValue in
                                 AppSettings.shared.equalizerWidthOverride = newValue
                             }
-                        Text("Slide right to dial in your Dock pill width. Set to 0 (Auto) for full-width fallback.")
+                        Text("Slide right to dial in your Dock pill width. Set to 0 (Auto) to match the Dock automatically — grant Accessibility for exact sizing.")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     }

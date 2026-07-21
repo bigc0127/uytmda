@@ -110,10 +110,43 @@ class MainWindowController: NSWindowController {
     }
 
     private var dockTrackingTimer: Timer?
+    private var dockBurstTimer: Timer?
+    private var dockBurstTicks = 0
 
     private func observeSettings() {
         NotificationCenter.default.addObserver(self, selector: #selector(settingsChanged), name: .equalizerSettingChanged, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(screenParametersChanged), name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        let wsCenter = NSWorkspace.shared.notificationCenter
+        wsCenter.addObserver(self, selector: #selector(runningAppsChanged), name: NSWorkspace.didLaunchApplicationNotification, object: nil)
+        wsCenter.addObserver(self, selector: #selector(runningAppsChanged), name: NSWorkspace.didTerminateApplicationNotification, object: nil)
+    }
+
+    @objc private func runningAppsChanged() {
+        Task { @MainActor in self.burstTrackDockResize() }
+    }
+
+    /// Follow the Dock's own grow/shrink animation after an app launches or quits:
+    /// re-read the pill frame at 10 Hz for 2 s, then fall back to the 1 s steady poll.
+    private func burstTrackDockResize() {
+        dockBurstTimer?.invalidate()
+        dockBurstTicks = 0
+        // The timer param stays outside the isolated closure: touching it inside trips
+        // Swift 6 region isolation (task-isolated value captured by @MainActor closure).
+        let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] t in
+            let done = MainActor.assumeIsolated { () -> Bool in
+                guard let self else { return true }
+                self.dockBurstTicks += 1
+                self.updateDockEqualizerFrame()
+                if self.dockBurstTicks >= 20 {
+                    self.dockBurstTimer = nil
+                    return true
+                }
+                return false
+            }
+            if done { t.invalidate() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        dockBurstTimer = timer
     }
 
     @objc private func screenParametersChanged() {
@@ -125,6 +158,8 @@ class MainWindowController: NSWindowController {
             tearDownDockEqualizerOverlay()
             return
         }
+
+        requestAccessibilityIfNeeded()
 
         guard let dockFrame = dockOverlayFrame() else {
             tearDownDockEqualizerOverlay()
@@ -170,6 +205,8 @@ class MainWindowController: NSWindowController {
     private func tearDownDockEqualizerOverlay() {
         dockTrackingTimer?.invalidate()
         dockTrackingTimer = nil
+        dockBurstTimer?.invalidate()
+        dockBurstTimer = nil
         dockEqualizerWindow?.orderOut(nil)
         dockEqualizerWindow = nil
         dockEqualizerView = nil
@@ -195,6 +232,10 @@ class MainWindowController: NSWindowController {
         }
         if dockEqualizerWindow?.frame != frame {
             dockEqualizerWindow?.setFrame(frame, display: true)
+            if let screen = window?.screen ?? NSScreen.main {
+                let isPill = isDockPillFrame(frame, screen: screen)
+                dockEqualizerWindow?.contentView?.layer?.cornerRadius = isPill ? min(frame.height / 2, 24) : 0
+            }
         }
     }
 
@@ -224,29 +265,43 @@ class MainWindowController: NSWindowController {
         return NSRect(x: screen.frame.minX, y: screen.frame.minY, width: screen.frame.width, height: dockHeight)
     }
 
-    /// Estimate the visible Dock pill bounds using `com.apple.dock` defaults.
-    /// The Dock pill is centered horizontally; its width depends on tilesize
-    /// and the number of items. Macos has no public API for the exact
-    /// rendered geometry, so this estimate is calibrated against typical
-    /// macOS 26 layouts.
+    /// Estimate the visible Dock pill bounds from `com.apple.dock` defaults plus the
+    /// live set of running apps. macOS has no public API for the rendered geometry;
+    /// constants are calibrated against macOS 27 beta 4 (see DockPillEstimator).
     private func dockFrameFromDefaults(on screen: NSScreen, dockHeight: CGFloat) -> NSRect? {
         guard let plist = readDockPlist(), !plist.isEmpty else { return nil }
         guard (plist["orientation"] as? String ?? "bottom") == "bottom" else { return nil }
         guard let tilesize = (plist["tilesize"] as? Double).flatMap({ CGFloat($0) }), tilesize > 0 else { return nil }
 
-        let persistentApps = (plist["persistent-apps"] as? [Any])?.count ?? 0
-        let persistentOthers = (plist["persistent-others"] as? [Any])?.count ?? 0
+        let persistentIDs = Self.bundleIDs(inTiles: plist["persistent-apps"])
+        let otherCount = (plist["persistent-others"] as? [Any])?.count ?? 0
         let showRecents = (plist["show-recents"] as? Bool) ?? true
-        let recentApps = showRecents ? ((plist["recent-apps"] as? [Any])?.count ?? 0) : 0
-        let totalItems = persistentApps + persistentOthers + recentApps + 1
-        guard totalItems > 1 else { return nil }
+        let recentIDs = showRecents ? Self.bundleIDs(inTiles: plist["recent-apps"]) : []
+        let runningIDs = NSWorkspace.shared.runningApplications
+            .filter { $0.activationPolicy == .regular }
+            .compactMap(\.bundleIdentifier)
+
+        let (items, separators) = DockPillEstimator.counts(
+            persistentAppIDs: persistentIDs,
+            otherItemCount: otherCount,
+            recentAppIDs: recentIDs,
+            runningAppIDs: runningIDs)
+        let estimatedWidth = DockPillEstimator.pillWidth(
+            tilesize: tilesize, itemCount: items, separatorCount: separators)
+        guard estimatedWidth > 0 else { return nil }
 
         let pillHeight = dockHeight - 6
-        let estimatedWidth = tilesize * CGFloat(totalItems) + 3 * CGFloat(totalItems - 1) + 32
         let width = min(estimatedWidth, screen.frame.width - 80)
         let x = screen.frame.minX + (screen.frame.width - width) / 2
         let y = screen.frame.minY + (dockHeight - pillHeight) / 2
         return NSRect(x: x, y: y, width: width, height: pillHeight)
+    }
+
+    private static func bundleIDs(inTiles value: Any?) -> [String] {
+        guard let tiles = value as? [[String: Any]] else { return [] }
+        return tiles.compactMap {
+            ($0["tile-data"] as? [String: Any])?["bundle-identifier"] as? String
+        }
     }
 
     private func readDockPlist() -> [String: Any]? {
@@ -281,7 +336,21 @@ class MainWindowController: NSWindowController {
         return frame.width < screen.frame.width - 40
     }
 
-private func dockListFrameViaAccessibility(on screen: NSScreen) -> NSRect? {
+    /// One-time system prompt for Accessibility so Auto width can read the exact Dock
+    /// pill frame. The persisted flag means a decline is never nagged about again; if
+    /// the user grants later in System Settings, the 1 s tracking timer picks it up.
+    private func requestAccessibilityIfNeeded() {
+        guard AppSettings.shared.equalizerWidthOverride == 0,
+              !AXIsProcessTrusted(),
+              !AppSettings.shared.didPromptForAccessibility else { return }
+        AppSettings.shared.didPromptForAccessibility = true
+        // Literal key: the kAXTrustedCheckOptionPrompt global is mutable state and
+        // trips Swift 6 strict concurrency when referenced from an actor.
+        let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+        AXIsProcessTrustedWithOptions(options)
+    }
+
+    private func dockListFrameViaAccessibility(on screen: NSScreen) -> NSRect? {
         guard AXIsProcessTrusted() else { return nil }
         guard let primary = NSScreen.screens.first else { return nil }
         guard let dockPID = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == "com.apple.dock" })?.processIdentifier else { return nil }
