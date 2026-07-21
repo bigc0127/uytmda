@@ -43,6 +43,7 @@ class AppSettings: ObservableObject {
         static let autoCheckUpdates = "autoCheckUpdates"
         static let lastUpdateCheckDate = "lastUpdateCheckDate"
         static let skippedUpdateVersion = "skippedUpdateVersion"
+        static let didPromptForAccessibility = "didPromptForAccessibility"
     }
     
     // Visual settings
@@ -116,6 +117,13 @@ class AppSettings: ObservableObject {
                 defaults.removeObject(forKey: Keys.skippedUpdateVersion)
             }
         }
+    }
+
+    /// Whether the one-time Accessibility permission prompt has been shown.
+    /// Not @Published: nothing observes it and it must not trigger objectWillChange.
+    var didPromptForAccessibility: Bool {
+        get { defaults.bool(forKey: Keys.didPromptForAccessibility) }
+        set { defaults.set(newValue, forKey: Keys.didPromptForAccessibility) }
     }
 
     private init() {

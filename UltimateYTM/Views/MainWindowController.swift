@@ -126,6 +126,8 @@ class MainWindowController: NSWindowController {
             return
         }
 
+        requestAccessibilityIfNeeded()
+
         guard let dockFrame = dockOverlayFrame() else {
             tearDownDockEqualizerOverlay()
             return
@@ -224,29 +226,43 @@ class MainWindowController: NSWindowController {
         return NSRect(x: screen.frame.minX, y: screen.frame.minY, width: screen.frame.width, height: dockHeight)
     }
 
-    /// Estimate the visible Dock pill bounds using `com.apple.dock` defaults.
-    /// The Dock pill is centered horizontally; its width depends on tilesize
-    /// and the number of items. Macos has no public API for the exact
-    /// rendered geometry, so this estimate is calibrated against typical
-    /// macOS 26 layouts.
+    /// Estimate the visible Dock pill bounds from `com.apple.dock` defaults plus the
+    /// live set of running apps. macOS has no public API for the rendered geometry;
+    /// constants are calibrated against macOS 27 beta 4 (see DockPillEstimator).
     private func dockFrameFromDefaults(on screen: NSScreen, dockHeight: CGFloat) -> NSRect? {
         guard let plist = readDockPlist(), !plist.isEmpty else { return nil }
         guard (plist["orientation"] as? String ?? "bottom") == "bottom" else { return nil }
         guard let tilesize = (plist["tilesize"] as? Double).flatMap({ CGFloat($0) }), tilesize > 0 else { return nil }
 
-        let persistentApps = (plist["persistent-apps"] as? [Any])?.count ?? 0
-        let persistentOthers = (plist["persistent-others"] as? [Any])?.count ?? 0
+        let persistentIDs = Self.bundleIDs(inTiles: plist["persistent-apps"])
+        let otherCount = (plist["persistent-others"] as? [Any])?.count ?? 0
         let showRecents = (plist["show-recents"] as? Bool) ?? true
-        let recentApps = showRecents ? ((plist["recent-apps"] as? [Any])?.count ?? 0) : 0
-        let totalItems = persistentApps + persistentOthers + recentApps + 1
-        guard totalItems > 1 else { return nil }
+        let recentIDs = showRecents ? Self.bundleIDs(inTiles: plist["recent-apps"]) : []
+        let runningIDs = NSWorkspace.shared.runningApplications
+            .filter { $0.activationPolicy == .regular }
+            .compactMap(\.bundleIdentifier)
+
+        let (items, separators) = DockPillEstimator.counts(
+            persistentAppIDs: persistentIDs,
+            otherItemCount: otherCount,
+            recentAppIDs: recentIDs,
+            runningAppIDs: runningIDs)
+        let estimatedWidth = DockPillEstimator.pillWidth(
+            tilesize: tilesize, itemCount: items, separatorCount: separators)
+        guard estimatedWidth > 0 else { return nil }
 
         let pillHeight = dockHeight - 6
-        let estimatedWidth = tilesize * CGFloat(totalItems) + 3 * CGFloat(totalItems - 1) + 32
         let width = min(estimatedWidth, screen.frame.width - 80)
         let x = screen.frame.minX + (screen.frame.width - width) / 2
         let y = screen.frame.minY + (dockHeight - pillHeight) / 2
         return NSRect(x: x, y: y, width: width, height: pillHeight)
+    }
+
+    private static func bundleIDs(inTiles value: Any?) -> [String] {
+        guard let tiles = value as? [[String: Any]] else { return [] }
+        return tiles.compactMap {
+            ($0["tile-data"] as? [String: Any])?["bundle-identifier"] as? String
+        }
     }
 
     private func readDockPlist() -> [String: Any]? {
@@ -281,7 +297,21 @@ class MainWindowController: NSWindowController {
         return frame.width < screen.frame.width - 40
     }
 
-private func dockListFrameViaAccessibility(on screen: NSScreen) -> NSRect? {
+    /// One-time system prompt for Accessibility so Auto width can read the exact Dock
+    /// pill frame. The persisted flag means a decline is never nagged about again; if
+    /// the user grants later in System Settings, the 1 s tracking timer picks it up.
+    private func requestAccessibilityIfNeeded() {
+        guard AppSettings.shared.equalizerWidthOverride == 0,
+              !AXIsProcessTrusted(),
+              !AppSettings.shared.didPromptForAccessibility else { return }
+        AppSettings.shared.didPromptForAccessibility = true
+        // Literal key: the kAXTrustedCheckOptionPrompt global is mutable state and
+        // trips Swift 6 strict concurrency when referenced from an actor.
+        let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+        AXIsProcessTrustedWithOptions(options)
+    }
+
+    private func dockListFrameViaAccessibility(on screen: NSScreen) -> NSRect? {
         guard AXIsProcessTrusted() else { return nil }
         guard let primary = NSScreen.screens.first else { return nil }
         guard let dockPID = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == "com.apple.dock" })?.processIdentifier else { return nil }
