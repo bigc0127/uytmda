@@ -29,6 +29,7 @@
 		2A000039000000000000000A /* GitHubRelease.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A00003A000000000000000A /* GitHubRelease.swift */; };
 		2A0000CB000000000000000A /* CookieBackupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000CC000000000000000A /* CookieBackupManager.swift */; };
 		2A0000DD000000000000000A /* NotchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000DE000000000000000A /* NotchBridge.swift */; };
+		2A0000FA000000000000000A /* DockPillEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A0000FB000000000000000A /* DockPillEstimator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -45,6 +46,7 @@
 		2A000022000000000000000A /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		2A000024000000000000000A /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		2A000026000000000000000A /* JavaScriptBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JavaScriptBridge.swift; sourceTree = "<group>"; };
+		2A0000FB000000000000000A /* DockPillEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DockPillEstimator.swift; sourceTree = "<group>"; };
 		2A000028000000000000000A /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		2A000030000000000000000A /* UltimateYTM.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UltimateYTM.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2A000030000000000000000B /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
@@ -145,6 +147,7 @@
 			isa = PBXGroup;
 			children = (
 				2A000026000000000000000A /* JavaScriptBridge.swift */,
+				2A0000FB000000000000000A /* DockPillEstimator.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -238,6 +241,7 @@
 				2A000021000000000000000A /* AppSettings.swift in Sources */,
 				2A000023000000000000000A /* NotificationManager.swift in Sources */,
 				2A000025000000000000000A /* JavaScriptBridge.swift in Sources */,
+				2A0000FA000000000000000A /* DockPillEstimator.swift in Sources */,
 				2A000027000000000000000A /* main.swift in Sources */,
 				2A000029000000000000000A /* AuthenticationManager.swift in Sources */,
 				2A000033000000000000000A /* RainbowEqualizerView.swift in Sources */,
